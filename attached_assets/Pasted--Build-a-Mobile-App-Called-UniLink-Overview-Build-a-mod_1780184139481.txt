@@ -1,0 +1,262 @@
+# Build a Mobile App Called "UniLink"
+
+## Overview
+
+Build a modern mobile app called UniLink** that helps university students meet other students in real life instantly.**
+
+The app's purpose is to reduce loneliness, encourage social interaction, and help students find people to do activities with nearby.
+
+Unlike social media, UniLink should prioritize real-world meetings instead of online conversations.
+
+The experience should feel fast, simple, and frictionless.
+
+---
+
+# Core Concept
+
+A student opens the app, selects what they want to do right now, and is automatically matched with a small group of nearby students who want to do the same activity.
+
+The goal is to go from opening the app to having a meetup arranged in under 60 seconds.
+
+---
+
+# Target Users
+
+* University students
+* College students
+* Freshers and international students
+* Students looking to make friends
+* Students looking for study partners
+
+---
+
+# Authentication
+
+Keep onboarding extremely simple.
+
+Users can:
+
+* Sign up with email
+* Sign up with phone number
+* Sign in with Google
+
+University verification is required.
+
+Users must verify using a university email address before joining activities.
+
+Examples:
+
+* .edu
+* .ac.uk
+
+No lengthy onboarding process.
+
+---
+
+# Home Screen
+
+Display only six activity options:
+
+🍔 Get Food
+
+📚 Study
+
+⚽ Sports
+
+🎮 Chill
+
+☕ Coffee
+
+🎵 Events
+
+Design should be large, clean, and easy to tap.
+
+No feeds.
+
+No notifications page.
+
+No content browsing.
+
+---
+
+# Activity Matching
+
+When a user selects an activity:
+
+1. Capture current location.
+2. Search for nearby users doing the same activity.
+3. Match users within a configurable radius.
+4. Automatically create a group.
+
+Group size:
+
+* Minimum: 2 people
+* Maximum: 6 people
+
+Do not allow users to browse profiles.
+
+Do not allow users to choose specific people.
+
+The system should automatically create the best available group.
+
+---
+
+# Meetup Creation
+
+Once a group is formed:
+
+* Generate a meetup session automatically.
+* Suggest a nearby meeting location.
+* Display a countdown timer.
+
+Example:
+
+"Meet at Campus Café"
+
+"Meet within 30 minutes"
+
+Display:
+
+* Meeting location
+* Time remaining
+* Number of participants
+
+---
+
+# Session Lifecycle
+
+After joining:
+
+Status = Active
+
+Countdown = 30 minutes
+
+Users can confirm attendance.
+
+If users repeatedly fail to attend meetups, reduce their reliability score.
+
+Sessions automatically expire after 60 minutes.
+
+Expired sessions disappear from the app.
+
+---
+
+# Safety Features
+
+Include:
+
+* Report User
+* Block User
+* Leave Meetup
+* Emergency Help Button
+
+Safety actions should always be accessible during active sessions.
+
+---
+
+# User Profiles
+
+Keep profiles minimal.
+
+Display only:
+
+* First Name
+* University
+* Profile Picture
+
+Do NOT include:
+
+* Bios
+* Followers
+* Following
+* Posts
+* Likes
+* Messaging history
+
+---
+
+# Messaging Rules
+
+No chat before meeting.
+
+Users should only see:
+
+"You have been matched."
+
+"Meet at Campus Café in 30 minutes."
+
+The focus is real-world interaction, not online conversation.
+
+---
+
+# Design Style
+
+Style inspiration:
+
+* Uber
+* Tinder
+* Apple Human Interface Guidelines
+
+Requirements:
+
+* Minimalist
+* Fast
+* Modern
+* Mobile-first
+* Clean typography
+* Large touch targets
+* Smooth animations
+
+Use a modern blue-and-white color palette.
+
+---
+
+# MVP Features
+
+Required:
+
+✅ Authentication
+
+✅ University verification
+
+✅ Activity selection
+
+✅ Location-based matching
+
+✅ Automatic group creation
+
+✅ Meetup location suggestion
+
+✅ Countdown timer
+
+✅ Session expiry
+
+✅ Basic profile
+
+✅ Report and block system
+
+Do NOT build:
+
+❌ Social feed
+
+❌ Direct messaging
+
+❌ Followers
+
+❌ Likes
+
+❌ Stories
+
+❌ Complex profiles
+
+❌ Gamification
+
+---
+
+# Success Metric
+
+The primary success metric is:
+
+"How quickly can a student go from opening the app to meeting another student in real life?"
+
+Optimize every screen and feature around this goal.
