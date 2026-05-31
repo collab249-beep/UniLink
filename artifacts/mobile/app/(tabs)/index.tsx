@@ -24,8 +24,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ActivityTile } from "@/components/ActivityTile";
 import { Avatar } from "@/components/Avatar";
+import { EventCard } from "@/components/EventCard";
 import { UniversityBadge } from "@/components/UniversityBadge";
 import { ACTIVITIES, ActivityType } from "@/constants/activities";
+import { TODAY_EVENTS } from "@/constants/events";
 import { CAMPUSES } from "@/constants/universities";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveActivity } from "@/contexts/LiveActivityContext";
@@ -257,6 +259,32 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Today's Events</Text>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/events")}>
+            <Text style={[styles.setCampusLink, { color: colors.primary }]}>See all</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.eventsPreview}>
+          {[...TODAY_EVENTS]
+            .sort((a, b) => a.hour - b.hour)
+            .slice(0, 4)
+            .map((event) => (
+              <EventCard key={event.id} event={event} compact />
+            ))}
+          <TouchableOpacity
+            style={[styles.seeAllEventsBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/events")}
+          >
+            <Ionicons name="calendar" size={16} color={colors.primary} />
+            <Text style={[styles.seeAllEventsBtnText, { color: colors.primary }]}>
+              View all {TODAY_EVENTS.length} events today
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={[styles.referralCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}
           onPress={() => router.push("/(tabs)/referral")}
@@ -374,6 +402,17 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", letterSpacing: -0.2 },
   setCampusLink: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12 },
+  eventsPreview: { gap: 8 },
+  seeAllEventsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  seeAllEventsBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   referralCard: {
     flexDirection: "row",
     alignItems: "center",
