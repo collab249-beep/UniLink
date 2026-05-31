@@ -18,6 +18,7 @@ import { CountdownTimer } from "@/components/CountdownTimer";
 import { SafetySheet } from "@/components/SafetySheet";
 import { ACTIVITIES } from "@/constants/activities";
 import { useAuth } from "@/contexts/AuthContext";
+import { useChat } from "@/contexts/ChatContext";
 import { useSession } from "@/contexts/SessionContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -26,6 +27,7 @@ export default function MeetupScreen() {
   const insets = useSafeAreaInsets();
   const { user, blockUser, reportUser } = useAuth();
   const { session, timeRemaining, confirmAttendance, leaveSession } = useSession();
+  const { unreadCount } = useChat();
   const [safetyVisible, setSafetyVisible] = useState(false);
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
@@ -173,12 +175,30 @@ export default function MeetupScreen() {
           </TouchableOpacity>
         )}
 
-        <View style={[styles.messageBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.mutedForeground} />
-          <Text style={[styles.messageText, { color: colors.mutedForeground }]}>
-            No messaging — meet in person and make a real connection
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.chatBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => router.push("/(tabs)/chat")}
+        >
+          <View style={[styles.chatIconWrap, { backgroundColor: colors.primary + "18" }]}>
+            <Ionicons name="chatbubble-ellipses" size={20} color={colors.primary} />
+          </View>
+          <View style={styles.chatBtnContent}>
+            <Text style={[styles.chatBtnTitle, { color: colors.foreground }]}>
+              Message {firstOther?.firstName ?? "your group"}
+            </Text>
+            <Text style={[styles.chatBtnSub, { color: colors.mutedForeground }]}>
+              Coordinate where to meet
+            </Text>
+          </View>
+          <View style={styles.chatBtnRight}>
+            {unreadCount > 0 && (
+              <View style={[styles.chatUnreadBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.chatUnreadText}>{unreadCount}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+          </View>
+        </TouchableOpacity>
       </ScrollView>
 
       <SafetySheet
@@ -301,13 +321,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   confirmedCardText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  messageBox: {
+  chatBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    padding: 14,
-    borderRadius: 12,
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
   },
-  messageText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  chatIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatBtnContent: { flex: 1 },
+  chatBtnTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  chatBtnSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  chatBtnRight: { flexDirection: "row", alignItems: "center", gap: 6 },
+  chatUnreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  chatUnreadText: { color: "#FFFFFF", fontSize: 11, fontFamily: "Inter_700Bold" },
 });
