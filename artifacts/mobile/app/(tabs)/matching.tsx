@@ -22,44 +22,24 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { UniversityBadge } from "@/components/UniversityBadge";
 import { ACTIVITIES, ActivityType } from "@/constants/activities";
+import { CAMPUSES } from "@/constants/universities";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSession } from "@/contexts/SessionContext";
 import { useColors } from "@/hooks/useColors";
 
-function RadarRing({ delay, size }: { delay: number; size: number }) {
+function RadarRing({ delay, size, color }: { delay: number; size: number; color: string }) {
   const opacity = useSharedValue(0.7);
   const scale = useSharedValue(0.3);
-
   useEffect(() => {
-    scale.value = withDelay(
-      delay,
-      withRepeat(withTiming(1, { duration: 2400, easing: Easing.out(Easing.quad) }), -1, false),
-    );
-    opacity.value = withDelay(
-      delay,
-      withRepeat(withTiming(0, { duration: 2400, easing: Easing.out(Easing.quad) }), -1, false),
-    );
+    scale.value = withDelay(delay, withRepeat(withTiming(1, { duration: 2400, easing: Easing.out(Easing.quad) }), -1, false));
+    opacity.value = withDelay(delay, withRepeat(withTiming(0, { duration: 2400, easing: Easing.out(Easing.quad) }), -1, false));
   }, [delay, opacity, scale]);
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }], opacity: opacity.value }));
   return (
     <Animated.View
-      style={[
-        {
-          position: "absolute",
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderWidth: 2,
-          borderColor: "#1A6BFF",
-        },
-        animStyle,
-      ]}
+      style={[{ position: "absolute", width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: color }, animStyle]}
     />
   );
 }
@@ -67,7 +47,7 @@ function RadarRing({ delay, size }: { delay: number; size: number }) {
 export default function MatchingScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { activity } = useLocalSearchParams<{ activity: ActivityType }>();
+  const { activity, campus } = useLocalSearchParams<{ activity: ActivityType; campus: string }>();
   const { user } = useAuth();
   const { createSession } = useSession();
   const [phase, setPhase] = useState<"searching" | "found" | "creating">("searching");
@@ -78,101 +58,94 @@ export default function MatchingScreen() {
   const bottomPad = Platform.OS === "web" ? Math.max(insets.bottom, 34) : insets.bottom;
 
   const activityConfig = ACTIVITIES.find((a) => a.id === activity);
+  const campusConfig = CAMPUSES.find((c) => c.id === campus);
   const iconScale = useSharedValue(1);
   const checkScale = useSharedValue(0);
 
   useEffect(() => {
     iconScale.value = withRepeat(
-      withSequence(
-        withTiming(1.08, { duration: 900 }),
-        withTiming(1, { duration: 900 }),
-      ),
+      withSequence(withTiming(1.08, { duration: 900 }), withTiming(1, { duration: 900 })),
       -1,
       false,
     );
-
     if (Platform.OS !== "web") {
       Location.requestForegroundPermissionsAsync().catch(() => {});
     }
-
     const countInterval = setInterval(() => {
-      setPeopleCount((p) => Math.min(p + 1, 3));
-    }, 1000);
-
+      setPeopleCount((p) => Math.min(p + 1, 4));
+    }, 900);
     timerRef.current = setTimeout(() => {
       clearInterval(countInterval);
       setPhase("found");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       checkScale.value = withSpring(1, { damping: 12, stiffness: 200 });
-
       timerRef.current = setTimeout(async () => {
         setPhase("creating");
         await createSession(
-          activity ?? "food",
+          activity ?? "study",
+          campus ?? "uon-university-park",
           user?.id ?? "me",
           user?.firstName ?? "You",
-          user?.university ?? "Your University",
+          user?.university ?? "University of Nottingham",
         );
         router.replace("/(tabs)/meetup");
       }, 1600);
     }, 4200);
-
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       clearInterval(countInterval);
     };
-  }, [activity, checkScale, createSession, iconScale, user]);
+  }, [activity, campus, checkScale, createSession, iconScale, user]);
 
-  const iconAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: iconScale.value }],
-  }));
-
-  const checkAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-    opacity: checkScale.value,
-  }));
+  const iconAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: iconScale.value }] }));
+  const checkAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }], opacity: checkScale.value }));
 
   function handleCancel() {
     if (timerRef.current) clearTimeout(timerRef.current);
     router.back();
   }
 
-  if (!activityConfig) {
-    router.back();
-    return null;
-  }
+  if (!activityConfig) { router.back(); return null; }
+
+  const radarColor = activityConfig.gradientStart;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad }]}>
       <View style={styles.content}>
         {phase === "searching" ? (
           <>
+            {campusConfig && (
+              <View style={[styles.campusTag, { backgroundColor: colors.secondary }]}>
+                <Ionicons name="location" size={12} color={colors.primary} />
+                <Text style={[styles.campusTagText, { color: colors.primary }]}>{campusConfig.name}</Text>
+                {user?.universityId && (
+                  <UniversityBadge universityId={user.universityId} size="sm" />
+                )}
+              </View>
+            )}
             <View style={styles.radarContainer}>
-              <RadarRing delay={0} size={280} />
-              <RadarRing delay={800} size={280} />
-              <RadarRing delay={1600} size={280} />
-              <Animated.View style={[styles.iconCenter, { backgroundColor: activityConfig.gradientStart }, iconAnimStyle]}>
-                <Ionicons
-                  name={activityConfig.iconName as any}
-                  size={36}
-                  color="#FFFFFF"
-                />
+              <RadarRing delay={0} size={280} color={radarColor} />
+              <RadarRing delay={800} size={280} color={radarColor} />
+              <RadarRing delay={1600} size={280} color={radarColor} />
+              <Animated.View
+                style={[
+                  styles.iconCenter,
+                  { backgroundColor: activityConfig.gradientStart },
+                  iconAnimStyle,
+                ]}
+              >
+                <Ionicons name={activityConfig.iconName as any} size={36} color="#FFFFFF" />
               </Animated.View>
             </View>
-
             <View style={styles.textSection}>
-              <Text style={[styles.headline, { color: colors.foreground }]}>
-                Finding people nearby
-              </Text>
-              <Text style={[styles.activityLabel, { color: colors.primary }]}>
-                {activityConfig.label}
-              </Text>
+              <Text style={[styles.headline, { color: colors.foreground }]}>Finding students nearby</Text>
+              <Text style={[styles.activityLabel, { color: colors.primary }]}>{activityConfig.label}</Text>
               <View style={styles.countRow}>
                 {peopleCount > 0 && (
                   <>
                     <View style={[styles.dot, { backgroundColor: colors.success }]} />
                     <Text style={[styles.countText, { color: colors.mutedForeground }]}>
-                      {peopleCount} {peopleCount === 1 ? "person" : "people"} nearby
+                      {peopleCount} {peopleCount === 1 ? "student" : "students"} nearby
                     </Text>
                   </>
                 )}
@@ -185,10 +158,10 @@ export default function MatchingScreen() {
               <Ionicons name="checkmark" size={52} color="#FFFFFF" />
             </Animated.View>
             <Text style={[styles.headline, { color: colors.foreground }]}>
-              {phase === "creating" ? "Setting up meetup..." : "Match found!"}
+              {phase === "creating" ? "Setting up meetup..." : "Group found!"}
             </Text>
             <Text style={[styles.subtext, { color: colors.mutedForeground }]}>
-              {phase === "creating" ? "Just a moment..." : "A group is ready for you"}
+              {phase === "creating" ? "Choosing a meetup spot..." : "Students matched at your campus"}
             </Text>
           </>
         )}
@@ -196,10 +169,7 @@ export default function MatchingScreen() {
 
       {phase === "searching" && (
         <View style={[styles.footer, { paddingBottom: bottomPad + 16 }]}>
-          <TouchableOpacity
-            style={[styles.cancelBtn, { backgroundColor: colors.muted }]}
-            onPress={handleCancel}
-          >
+          <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: colors.muted }]} onPress={handleCancel}>
             <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -210,22 +180,27 @@ export default function MatchingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flex: 1, alignItems: "center", justifyContent: "center", gap: 32, paddingHorizontal: 24 },
-  radarContainer: {
-    width: 280,
-    height: 280,
+  content: { flex: 1, alignItems: "center", justifyContent: "center", gap: 24, paddingHorizontal: 24 },
+  campusTag: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    marginBottom: 8,
   },
+  campusTagText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  radarContainer: { width: 280, height: 280, alignItems: "center", justifyContent: "center" },
   iconCenter: {
     width: 80,
     height: 80,
     borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#1A6BFF",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 8,
   },
@@ -249,10 +224,6 @@ const styles = StyleSheet.create({
   },
   subtext: { fontSize: 15, fontFamily: "Inter_400Regular" },
   footer: { paddingHorizontal: 24 },
-  cancelBtn: {
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-  },
+  cancelBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center" },
   cancelText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
 });

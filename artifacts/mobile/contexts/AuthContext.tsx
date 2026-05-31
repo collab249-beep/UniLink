@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
+import { UniversityId, detectNottinghamUniversity } from "@/constants/universities";
+
 const STORAGE_KEY = "unilink:user";
 
 export interface UserProfile {
@@ -8,10 +10,14 @@ export interface UserProfile {
   firstName: string;
   email: string;
   universityEmail: string;
+  universityId: UniversityId | null;
   university: string;
   profilePicture?: string;
   isVerified: boolean;
   reliabilityScore: number;
+  referralCode: string;
+  referralCount: number;
+  isAmbassador: boolean;
   blockedUsers: string[];
   reportedUsers: string[];
 }
@@ -31,25 +37,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const UNIVERSITY_DOMAINS = [
-  ".edu", ".ac.uk", ".edu.au", ".ac.nz", ".edu.sg",
-  ".uni-", ".university.", ".college.", ".ac.in",
-];
-
-function detectUniversity(email: string): string {
-  const domain = email.split("@")[1] ?? "";
-  if (domain.includes("manchester")) return "University of Manchester";
-  if (domain.includes("kcl") || domain.includes("king")) return "King's College London";
-  if (domain.includes("ed.ac")) return "University of Edinburgh";
-  if (domain.includes("imperial")) return "Imperial College London";
-  if (domain.includes("ucl")) return "University College London";
-  if (domain.includes("bristol")) return "University of Bristol";
-  if (domain.includes("leeds")) return "University of Leeds";
-  if (domain.includes("ox.ac")) return "University of Oxford";
-  if (domain.includes("cam.ac")) return "University of Cambridge";
-  if (domain.includes("mit")) return "MIT";
-  if (domain.includes("harvard")) return "Harvard University";
-  return "Your University";
+function generateReferralCode(firstName: string): string {
+  const base = firstName.toUpperCase().slice(0, 4).padEnd(4, "X");
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `${base}${num}`;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -58,9 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) setUser(JSON.parse(raw) as UserProfile);
-      })
+      .then((raw) => { if (raw) setUser(JSON.parse(raw) as UserProfile); })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -69,60 +58,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(profile);
   }
 
-  async function signInWithGoogle() {
-    const profile: UserProfile = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
-      firstName: "Alex",
-      email: "alex@student.example.edu",
-      universityEmail: "alex@student.example.edu",
-      university: "University of Manchester",
-      isVerified: true,
-      reliabilityScore: 95,
-      blockedUsers: [],
-      reportedUsers: [],
-    };
-    await saveUser(profile);
-  }
-
-  async function signIn(email: string, _password: string) {
-    const profile: UserProfile = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
-      firstName: email.split("@")[0] ?? "Student",
-      email,
-      universityEmail: email,
-      university: detectUniversity(email),
-      isVerified: true,
-      reliabilityScore: 100,
-      blockedUsers: [],
-      reportedUsers: [],
-    };
-    await saveUser(profile);
-  }
-
-  async function signUp(firstName: string, email: string, _password: string): Promise<UserProfile> {
-    const profile: UserProfile = {
+  function makeProfile(firstName: string, email: string, overrides?: Partial<UserProfile>): UserProfile {
+    return {
       id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
       firstName,
       email,
       universityEmail: "",
+      universityId: null,
       university: "",
       isVerified: false,
       reliabilityScore: 100,
+      referralCode: generateReferralCode(firstName),
+      referralCount: 0,
+      isAmbassador: false,
       blockedUsers: [],
       reportedUsers: [],
+      ...overrides,
     };
+  }
+
+  async function signInWithGoogle() {
+    const profile = makeProfile("Alex", "alex@nottingham.ac.uk", {
+      universityEmail: "alex@nottingham.ac.uk",
+      universityId: "uon",
+      university: "University of Nottingham",
+      isVerified: true,
+    });
+    await saveUser(profile);
+  }
+
+  async function signIn(email: string, _password: string) {
+    const profile = makeProfile(email.split("@")[0] ?? "Student", email, {
+      universityEmail: email,
+      universityId: null,
+      university: "",
+      isVerified: false,
+    });
+    await saveUser(profile);
+  }
+
+  async function signUp(firstName: string, email: string, _password: string): Promise<UserProfile> {
+    const profile = makeProfile(firstName, email);
     await saveUser(profile);
     return profile;
   }
 
   async function verifyUniversity(universityEmail: string) {
-    const isValid = UNIVERSITY_DOMAINS.some((d) => universityEmail.includes(d));
-    if (!isValid) throw new Error("Please use a valid university email address (.edu, .ac.uk, etc.)");
+    const trimmed = universityEmail.trim().toLowerCase();
+    const uniConfig = detectNottinghamUniversity(trimmed);
+
+    if (!uniConfig) {
+      const domain = trimmed.split("@")[1] ?? "";
+      const isOtherUni = [".edu", ".ac.uk", ".edu.au", ".ac.nz"].some((d) => domain.endsWith(d));
+      if (!isOtherUni) {
+        throw new Error(
+          "Please use your University of Nottingham (@nottingham.ac.uk) or NTU (@ntu.ac.uk) email address.",
+        );
+      }
+      if (!user) throw new Error("Not signed in");
+      const updated: UserProfile = {
+        ...user,
+        universityEmail: trimmed,
+        universityId: "other",
+        university: "Other University",
+        isVerified: true,
+      };
+      await saveUser(updated);
+      return;
+    }
+
     if (!user) throw new Error("Not signed in");
     const updated: UserProfile = {
       ...user,
-      universityEmail,
-      university: detectUniversity(universityEmail),
+      universityEmail: trimmed,
+      universityId: uniConfig.id,
+      university: uniConfig.name,
       isVerified: true,
     };
     await saveUser(updated);
@@ -136,19 +146,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signOut() {
     await AsyncStorage.removeItem(STORAGE_KEY);
     await AsyncStorage.removeItem("unilink:session");
+    await AsyncStorage.removeItem("unilink:free");
     setUser(null);
   }
 
   async function blockUser(userId: string) {
     if (!user) return;
-    const updated = { ...user, blockedUsers: [...new Set([...user.blockedUsers, userId])] };
-    await saveUser(updated);
+    await saveUser({ ...user, blockedUsers: [...new Set([...user.blockedUsers, userId])] });
   }
 
   async function reportUser(userId: string) {
     if (!user) return;
-    const updated = { ...user, reportedUsers: [...new Set([...user.reportedUsers, userId])] };
-    await saveUser(updated);
+    await saveUser({ ...user, reportedUsers: [...new Set([...user.reportedUsers, userId])] });
   }
 
   return (

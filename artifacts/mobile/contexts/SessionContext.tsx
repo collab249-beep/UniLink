@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import { ACTIVITIES, ActivityType, FAKE_PARTICIPANTS } from "@/constants/activities";
+import { CAMPUSES, getSpotForActivity } from "@/constants/universities";
 
 const STORAGE_KEY = "unilink:session";
 const SESSION_DURATION_MS = 30 * 60 * 1000;
@@ -19,6 +20,7 @@ export interface MeetupSession {
   activity: ActivityType;
   participants: Participant[];
   location: string;
+  campus: string;
   startTime: number;
   meetDeadline: number;
   expiresAt: number;
@@ -28,7 +30,13 @@ export interface MeetupSession {
 interface SessionContextType {
   session: MeetupSession | null;
   timeRemaining: number;
-  createSession: (activity: ActivityType, currentUserId: string, currentFirstName: string, currentUniversity: string) => Promise<MeetupSession>;
+  createSession: (
+    activity: ActivityType,
+    campusId: string,
+    currentUserId: string,
+    currentFirstName: string,
+    currentUniversity: string,
+  ) => Promise<MeetupSession>;
   confirmAttendance: () => Promise<void>;
   leaveSession: () => Promise<void>;
 }
@@ -36,8 +44,7 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | null>(null);
 
 function pickRandom<T>(arr: T[], count: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+  return [...arr].sort(() => Math.random() - 0.5).slice(0, count);
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
@@ -49,17 +56,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
       if (raw) {
         const s = JSON.parse(raw) as MeetupSession;
-        if (Date.now() < s.expiresAt) {
-          setSession(s);
-          startTimer(s);
-        } else {
-          AsyncStorage.removeItem(STORAGE_KEY);
-        }
+        if (Date.now() < s.expiresAt) { setSession(s); startTimer(s); }
+        else AsyncStorage.removeItem(STORAGE_KEY);
       }
     });
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
   function startTimer(s: MeetupSession) {
@@ -67,9 +68,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const update = () => {
       const remaining = Math.max(0, s.meetDeadline - Date.now());
       setTimeRemaining(remaining);
-      if (remaining === 0) {
-        if (timerRef.current) clearInterval(timerRef.current);
-      }
+      if (remaining === 0 && timerRef.current) clearInterval(timerRef.current);
     };
     update();
     timerRef.current = setInterval(update, 1000);
@@ -77,24 +76,29 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   async function createSession(
     activity: ActivityType,
+    campusId: string,
     currentUserId: string,
     currentFirstName: string,
     currentUniversity: string,
   ): Promise<MeetupSession> {
-    const activityConfig = ACTIVITIES.find((a) => a.id === activity)!;
-    const otherParticipants = pickRandom(FAKE_PARTICIPANTS, Math.floor(Math.random() * 3) + 1);
+    const campus = CAMPUSES.find((c) => c.id === campusId);
+    const location = campus
+      ? getSpotForActivity(campusId, activity)
+      : ACTIVITIES.find((a) => a.id === activity)?.label ?? "Campus";
+
+    const otherCount = Math.floor(Math.random() * 3) + 1;
+    const others = pickRandom(FAKE_PARTICIPANTS, otherCount);
     const participants: Participant[] = [
       { id: currentUserId, firstName: currentFirstName, university: currentUniversity },
-      ...otherParticipants,
+      ...others,
     ];
-    const locations = activityConfig.locations;
-    const location = locations[Math.floor(Math.random() * locations.length)];
     const now = Date.now();
     const s: MeetupSession = {
       id: now.toString() + Math.random().toString(36).slice(2, 9),
       activity,
       participants,
       location,
+      campus: campus?.name ?? "Campus",
       startTime: now,
       meetDeadline: now + SESSION_DURATION_MS,
       expiresAt: now + SESSION_EXPIRY_MS,
