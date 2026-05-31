@@ -20,6 +20,10 @@ export interface UserProfile {
   isAmbassador: boolean;
   blockedUsers: string[];
   reportedUsers: string[];
+  bio?: string;
+  interests?: string[];
+  year?: string;
+  profileComplete?: boolean;
 }
 
 interface AuthContextType {
@@ -30,6 +34,7 @@ interface AuthContextType {
   signUp: (firstName: string, email: string, password: string) => Promise<UserProfile>;
   verifyUniversity: (universityEmail: string) => Promise<void>;
   updateProfilePicture: (uri: string) => Promise<void>;
+  updateProfile: (fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "firstName" | "profileComplete">>) => Promise<void>;
   signOut: () => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
   reportUser: (userId: string) => Promise<void>;
@@ -143,6 +148,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveUser({ ...user, profilePicture: uri });
   }
 
+  async function updateProfile(
+    fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "firstName" | "profileComplete">>,
+  ) {
+    if (!user) return;
+    await saveUser({ ...user, ...fields });
+  }
+
   async function signOut() {
     await AsyncStorage.removeItem(STORAGE_KEY);
     await AsyncStorage.removeItem("unilink:session");
@@ -164,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user, isLoading,
       signInWithGoogle, signIn, signUp,
-      verifyUniversity, updateProfilePicture,
+      verifyUniversity, updateProfilePicture, updateProfile,
       signOut, blockUser, reportUser,
     }}>
       {children}

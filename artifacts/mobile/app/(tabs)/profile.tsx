@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import {
   Alert,
   Platform,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/Avatar";
 import { UniversityBadge } from "@/components/UniversityBadge";
+import { INTERESTS, profileCompletionScore } from "@/constants/interests";
 import { UNIVERSITIES } from "@/constants/universities";
 import { useAuth } from "@/contexts/AuthContext";
 import { useColors } from "@/hooks/useColors";
@@ -22,29 +23,32 @@ import { useColors } from "@/hooks/useColors";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, signOut, updateProfilePicture } = useAuth();
-  const [uploading, setUploading] = useState(false);
+  const { user, signOut } = useAuth();
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? Math.max(insets.bottom, 34) : insets.bottom;
 
   const uniConfig = UNIVERSITIES.find((u) => u.id === user?.universityId);
 
-  async function pickPhoto() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setUploading(true);
-      await updateProfilePicture(result.assets[0].uri);
-      setUploading(false);
-    }
-  }
+  const reliabilityColor =
+    (user?.reliabilityScore ?? 0) >= 80
+      ? colors.success
+      : (user?.reliabilityScore ?? 0) >= 50
+      ? colors.warning
+      : colors.destructive;
+
+  const completionScore = profileCompletionScore(
+    user?.bio,
+    user?.interests,
+    user?.year,
+    user?.profilePicture,
+  );
+  const completionBarColor =
+    completionScore >= 75 ? colors.success : completionScore >= 50 ? "#FF6D00" : colors.primary;
+
+  const shownInterests = (user?.interests ?? [])
+    .map((id) => INTERESTS.find((i) => i.id === id))
+    .filter(Boolean) as typeof INTERESTS;
 
   async function handleSignOut() {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -60,58 +64,140 @@ export default function ProfileScreen() {
     ]);
   }
 
-  const reliabilityColor =
-    (user?.reliabilityScore ?? 0) >= 80
-      ? colors.success
-      : (user?.reliabilityScore ?? 0) >= 50
-      ? colors.warning
-      : colors.destructive;
-
-  const universityBgColor = uniConfig
-    ? uniConfig.id === "uon" ? "#EEF4FD" : "#F9EEF0"
-    : colors.secondary;
-  const universityTextColor = uniConfig?.primaryColor ?? colors.primary;
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: colors.border }]}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: topPad + 8, backgroundColor: colors.card, borderBottomColor: colors.border },
+        ]}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          style={[styles.editHeaderBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+          onPress={() => router.push("/(tabs)/edit-profile")}
+        >
+          <Ionicons name="pencil" size={14} color={colors.primary} />
+          <Text style={[styles.editHeaderBtnText, { color: colors.primary }]}>Edit</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={pickPhoto} style={styles.avatarWrap}>
-            <Avatar firstName={user?.firstName ?? "U"} uri={user?.profilePicture} size={100} />
-            <View style={[styles.editBadge, { backgroundColor: colors.primary }]}>
-              {uploading
-                ? <Ionicons name="refresh" size={14} color="#FFFFFF" />
-                : <Ionicons name="camera" size={14} color="#FFFFFF" />
-              }
+        <LinearGradient
+          colors={
+            uniConfig?.id === "ntu"
+              ? ["#6A1020", "#3D0810"]
+              : uniConfig?.id === "uon"
+              ? ["#005EB8", "#003875"]
+              : ["#1A6BFF", "#0041CC"]
+          }
+          style={styles.heroBanner}
+        >
+          <View style={styles.heroInner}>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/edit-profile")}
+              style={styles.avatarWrap}
+            >
+              <Avatar firstName={user?.firstName ?? "U"} uri={user?.profilePicture} size={88} showBorder />
+              <View style={[styles.editBadge, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
+                <Ionicons name="camera" size={12} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.heroName}>{user?.firstName}</Text>
+            {uniConfig && (
+              <View style={styles.heroBadgeRow}>
+                <UniversityBadge universityId={user?.universityId ?? null} size="sm" />
+                <Text style={styles.heroUni}>{uniConfig.name}</Text>
+              </View>
+            )}
+            {user?.year && (
+              <Text style={styles.heroYear}>{user.year}</Text>
+            )}
+          </View>
+        </LinearGradient>
+
+        {completionScore < 100 && (
+          <TouchableOpacity
+            style={[styles.completionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/edit-profile")}
+          >
+            <View style={styles.completionTop}>
+              <Text style={[styles.completionTitle, { color: colors.foreground }]}>
+                Complete your profile
+              </Text>
+              <Text style={[styles.completionPct, { color: completionBarColor }]}>
+                {completionScore}%
+              </Text>
+            </View>
+            <View style={[styles.completionTrack, { backgroundColor: colors.border }]}>
+              <View
+                style={[
+                  styles.completionFill,
+                  { width: `${completionScore}%` as any, backgroundColor: completionBarColor },
+                ]}
+              />
+            </View>
+            <Text style={[styles.completionHint, { color: colors.mutedForeground }]}>
+              {!user?.bio && !user?.interests?.length
+                ? "Add a bio and interests so others know what you're into"
+                : !user?.bio
+                ? "Add a bio to let people know who you are"
+                : !user?.interests?.length
+                ? "Select your interests to find like-minded students"
+                : "Almost there — finish your profile"}
+            </Text>
+            <View style={[styles.completionBtn, { backgroundColor: colors.primary }]}>
+              <Text style={styles.completionBtnText}>Finish profile</Text>
+              <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
+        )}
 
-          <Text style={[styles.displayName, { color: colors.foreground }]}>{user?.firstName}</Text>
+        {user?.bio ? (
+          <View style={[styles.bioCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.cardSectionLabel, { color: colors.mutedForeground }]}>BIO</Text>
+            <Text style={[styles.bioText, { color: colors.foreground }]}>{user.bio}</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.bioCard, styles.bioCardEmpty, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/edit-profile")}
+          >
+            <Ionicons name="chatbubble-outline" size={18} color={colors.mutedForeground} />
+            <Text style={[styles.bioEmptyText, { color: colors.mutedForeground }]}>
+              Add a bio so people know what you're about
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        )}
 
-          {uniConfig ? (
-            <View style={[styles.uniBadgeRow, { backgroundColor: universityBgColor }]}>
-              <View style={[styles.uniDot, { backgroundColor: uniConfig.primaryColor }]} />
-              <Text style={[styles.uniName, { color: universityTextColor }]}>{uniConfig.name}</Text>
-              <UniversityBadge universityId={user?.universityId ?? null} size="sm" />
+        {shownInterests.length > 0 && (
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.cardSectionLabel, { color: colors.mutedForeground }]}>INTERESTS</Text>
+            <View style={styles.interestsGrid}>
+              {shownInterests.map((interest) => (
+                <View
+                  key={interest.id}
+                  style={[
+                    styles.interestChip,
+                    { backgroundColor: interest.color + "14", borderColor: interest.color + "30" },
+                  ]}
+                >
+                  <Text style={styles.interestEmoji}>{interest.emoji}</Text>
+                  <Text style={[styles.interestLabel, { color: interest.color }]}>
+                    {interest.label}
+                  </Text>
+                </View>
+              ))}
             </View>
-          ) : (
-            <View style={[styles.verifiedBadge, { backgroundColor: colors.secondary }]}>
-              <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
-              <Text style={[styles.verifiedText, { color: colors.primary }]}>Verified Student</Text>
-            </View>
-          )}
-        </View>
+          </View>
+        )}
 
         {user?.isAmbassador && (
           <View style={[styles.ambassadorCard, { backgroundColor: "#FFF8E1", borderColor: "#FFB300" + "40" }]}>
@@ -125,6 +211,21 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        <View style={[styles.statsRow]}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statNum, { color: colors.foreground }]}>{user?.referralCount ?? 0}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Referrals</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statNum, { color: reliabilityColor }]}>{user?.reliabilityScore ?? 100}%</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Reliability</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statNum, { color: colors.foreground }]}>{shownInterests.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Interests</Text>
+          </View>
+        </View>
+
         <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
             <Ionicons name="school-outline" size={20} color={colors.mutedForeground} />
@@ -135,20 +236,11 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+          <View style={styles.infoRow}>
             <Ionicons name="mail-outline" size={20} color={colors.mutedForeground} />
             <View style={styles.infoContent}>
               <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Email</Text>
               <Text style={[styles.infoValue, { color: colors.foreground }]}>{user?.email}</Text>
-            </View>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="star-outline" size={20} color={reliabilityColor} />
-            <View style={styles.infoContent}>
-              <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Reliability score</Text>
-              <Text style={[styles.infoValue, { color: reliabilityColor }]}>
-                {user?.reliabilityScore ?? 100}%
-              </Text>
             </View>
           </View>
         </View>
@@ -205,52 +297,140 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-  content: { padding: 20, gap: 14 },
-  avatarSection: { alignItems: "center", paddingVertical: 20, gap: 8 },
-  avatarWrap: { position: "relative", marginBottom: 4 },
-  editBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2.5,
-    borderColor: "#FFFFFF",
-  },
-  displayName: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
-  uniBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  uniDot: { width: 8, height: 8, borderRadius: 4 },
-  uniName: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  verifiedBadge: {
+  editHeaderBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 20,
+    borderWidth: 1,
   },
-  verifiedText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  editHeaderBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  content: { gap: 14 },
+  heroBanner: { paddingVertical: 28, paddingHorizontal: 20 },
+  heroInner: { alignItems: "center", gap: 6 },
+  avatarWrap: { position: "relative", marginBottom: 6 },
+  editBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroName: {
+    color: "#FFFFFF",
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.4,
+  },
+  heroBadgeRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  heroUni: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  heroYear: {
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  completionCard: {
+    marginHorizontal: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  completionTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  completionTitle: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  completionPct: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  completionTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
+  completionFill: { height: 6, borderRadius: 3 },
+  completionHint: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17 },
+  completionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  completionBtnText: { color: "#FFFFFF", fontSize: 14, fontFamily: "Inter_700Bold" },
+  bioCard: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 8,
+  },
+  bioCardEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cardSectionLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 1,
+  },
+  bioText: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 21 },
+  bioEmptyText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular" },
+  section: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  interestsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  interestChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  interestEmoji: { fontSize: 13 },
+  interestLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   ambassadorCard: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
+    marginHorizontal: 20,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
   },
   ambassadorTitle: { fontSize: 14, fontFamily: "Inter_700Bold" },
   ambassadorSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
-  infoCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 20,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 3,
+  },
+  statNum: { fontSize: 22, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
+  statLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  infoCard: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -266,6 +446,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    marginHorizontal: 20,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
@@ -275,6 +456,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    marginHorizontal: 20,
     paddingVertical: 16,
     borderRadius: 14,
     borderWidth: 1,

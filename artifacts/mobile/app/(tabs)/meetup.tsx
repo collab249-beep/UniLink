@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/Avatar";
 import { CountdownTimer } from "@/components/CountdownTimer";
+import { ProfileCard } from "@/components/ProfileCard";
 import { SafetySheet } from "@/components/SafetySheet";
 import { ACTIVITIES } from "@/constants/activities";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,6 +42,38 @@ export default function MeetupScreen() {
   const activityConfig = ACTIVITIES.find((a) => a.id === session.activity);
   const otherParticipants = session.participants.filter((p) => p.id !== user?.id);
   const firstOther = otherParticipants[0];
+
+  const SIMULATED_PROFILES: Record<string, { bio: string; interests: string[]; year: string; reliabilityScore: number }> = {
+    default: {
+      bio: "Just a Nottingham student trying to meet people and make the most of uni life 🎓",
+      interests: ["coffee", "study", "gaming", "music", "society"],
+      year: "2nd Year",
+      reliabilityScore: 92,
+    },
+  };
+  function getSimProfile(participant: typeof session.participants[0]) {
+    const seed = participant.firstName.charCodeAt(0) % 4;
+    const bios = [
+      "CS student who loves football and grabbing coffee between lectures ☕⚽",
+      "Business student at NTU — always up for a study session or a night out 🎉",
+      "Engineering nerd. Gym in the morning, gaming at night 💪🎮",
+      "Final year English Lit student. Big fan of good food and live music 🍜🎵",
+    ];
+    const allInterests = ["study", "coffee", "football", "gym", "gaming", "night_out", "society", "music", "cooking", "food", "travel", "tech"];
+    const pickedInterests = [
+      allInterests[seed],
+      allInterests[(seed + 2) % allInterests.length],
+      allInterests[(seed + 4) % allInterests.length],
+      allInterests[(seed + 6) % allInterests.length],
+    ];
+    const years = ["1st Year", "2nd Year", "3rd Year", "Masters"];
+    return {
+      bio: bios[seed],
+      interests: pickedInterests,
+      year: years[seed],
+      reliabilityScore: 88 + seed * 3,
+    };
+  }
 
   async function handleConfirm() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -103,40 +136,31 @@ export default function MeetupScreen() {
           )}
         </View>
 
-        <View>
+        <View style={styles.participantsSection}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
             Your group · {session.participants.length} people
           </Text>
-          <View style={[styles.participantsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {session.participants.map((p, i) => (
-              <View
+          {session.participants.map((p) => {
+            const isSelf = p.id === user?.id;
+            const sim = isSelf ? {} : getSimProfile(p);
+            return (
+              <ProfileCard
                 key={p.id}
-                style={[
-                  styles.participantRow,
-                  i < session.participants.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                ]}
-              >
-                <Avatar firstName={p.firstName} uri={p.profilePicture} size={44} />
-                <View style={styles.participantInfo}>
-                  <Text style={[styles.participantName, { color: colors.foreground }]}>
-                    {p.firstName}
-                    {p.id === user?.id && (
-                      <Text style={[styles.youBadge, { color: colors.primary }]}> · You</Text>
-                    )}
-                  </Text>
-                  <Text style={[styles.participantUni, { color: colors.mutedForeground }]}>
-                    {p.university}
-                  </Text>
-                </View>
-                {p.id === user?.id && session.attendanceConfirmed && (
-                  <View style={[styles.confirmedBadge, { backgroundColor: colors.success + "20" }]}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                    <Text style={[styles.confirmedText, { color: colors.success }]}>Going</Text>
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
+                isSelf={isSelf}
+                participant={{
+                  id: p.id,
+                  firstName: p.firstName,
+                  university: p.university,
+                  universityId: (p as any).universityId ?? null,
+                  profilePicture: p.profilePicture,
+                  bio: isSelf ? user?.bio : (sim as any).bio,
+                  interests: isSelf ? user?.interests : (sim as any).interests,
+                  year: isSelf ? user?.year : (sim as any).year,
+                  reliabilityScore: isSelf ? user?.reliabilityScore : (sim as any).reliabilityScore,
+                }}
+              />
+            );
+          })}
         </View>
 
         <View style={[styles.locationCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
@@ -267,21 +291,7 @@ const styles = StyleSheet.create({
   timerTitle: { fontSize: 13, fontFamily: "Inter_500Medium", letterSpacing: 0.4 },
   expiredText: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
   sectionTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", marginBottom: 10 },
-  participantsCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  participantRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    gap: 12,
-  },
-  participantInfo: { flex: 1 },
-  participantName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  youBadge: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  participantUni: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  participantsSection: { gap: 10 },
   confirmedBadge: {
     flexDirection: "row",
     alignItems: "center",
