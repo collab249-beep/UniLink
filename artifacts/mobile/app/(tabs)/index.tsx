@@ -31,6 +31,7 @@ import { TODAY_EVENTS } from "@/constants/events";
 import { CAMPUSES } from "@/constants/universities";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveActivity } from "@/contexts/LiveActivityContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { useSession } from "@/contexts/SessionContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -147,6 +148,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { session } = useSession();
   const { isFree, freeTimeRemaining, stats, selectedCampus, setFree, setNotFree } = useLiveActivity();
+  const { unreadCount } = useNotifications();
   const [campusModalVisible, setCampusModalVisible] = useState(false);
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
@@ -198,9 +200,22 @@ export default function HomeScreen() {
           </View>
           <Text style={[styles.name, { color: colors.foreground }]}>{user?.firstName ?? "Student"}</Text>
         </View>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
-          <Avatar firstName={user?.firstName ?? "U"} uri={user?.profilePicture} size={44} showBorder />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.bellBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/notifications")}
+          >
+            <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
+            {unreadCount > 0 && (
+              <View style={[styles.bellBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
+            <Avatar firstName={user?.firstName ?? "U"} uri={user?.profilePicture} size={44} showBorder />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -401,6 +416,27 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", letterSpacing: -0.2 },
   setCampusLink: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  bellBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: { color: "#FFFFFF", fontSize: 9, fontFamily: "Inter_700Bold" },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12 },
   eventsPreview: { gap: 8 },
   seeAllEventsBtn: {

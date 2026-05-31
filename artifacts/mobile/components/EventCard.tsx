@@ -10,9 +10,11 @@ import { useColors } from "@/hooks/useColors";
 interface EventCardProps {
   event: CampusEvent;
   compact?: boolean;
+  onRemind?: () => void;
+  reminded?: boolean;
 }
 
-export function EventCard({ event, compact = false }: EventCardProps) {
+export function EventCard({ event, compact = false, onRemind, reminded = false }: EventCardProps) {
   const colors = useColors();
   const [attending, setAttending] = useState(false);
   const [count, setCount] = useState(event.attendees);
@@ -107,20 +109,40 @@ export function EventCard({ event, compact = false }: EventCardProps) {
             <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{count} going</Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={[
-            styles.attendBtn,
-            { backgroundColor: attending ? colors.success : colors.primary },
-          ]}
-          onPress={toggleAttend}
-        >
-          <Ionicons
-            name={attending ? "checkmark" : "add"}
-            size={16}
-            color="#FFFFFF"
-          />
-          <Text style={styles.attendBtnText}>{attending ? "Going" : "Attend"}</Text>
-        </TouchableOpacity>
+        <View style={styles.actionBtns}>
+          {onRemind && (
+            <TouchableOpacity
+              style={[
+                styles.remindBtn,
+                {
+                  backgroundColor: reminded ? "#FFF3E0" : colors.secondary,
+                  borderColor: reminded ? "#FF6D00" : colors.border,
+                },
+              ]}
+              onPress={onRemind}
+            >
+              <Ionicons
+                name={reminded ? "notifications" : "notifications-outline"}
+                size={15}
+                color={reminded ? "#FF6D00" : colors.mutedForeground}
+              />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[
+              styles.attendBtn,
+              { backgroundColor: attending ? colors.success : colors.primary },
+            ]}
+            onPress={toggleAttend}
+          >
+            <Ionicons
+              name={attending ? "checkmark" : "add"}
+              size={16}
+              color="#FFFFFF"
+            />
+            <Text style={styles.attendBtnText}>{attending ? "Going" : "Attend"}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -166,6 +188,15 @@ const styles = StyleSheet.create({
   footerMeta: { flex: 1, gap: 4 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   metaText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 },
+  actionBtns: { flexDirection: "row", alignItems: "center", gap: 8 },
+  remindBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   attendBtn: {
     flexDirection: "row",
     alignItems: "center",

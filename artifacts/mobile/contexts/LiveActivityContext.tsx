@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import { ActivityType } from "@/constants/activities";
+import { scheduleFreeExpiryAlert } from "@/hooks/useNotifications";
 
 const STORAGE_KEY = "unilink:free";
 const FREE_DURATION_MS = 60 * 60 * 1000;
@@ -104,6 +105,7 @@ export function LiveActivityProvider({ children }: { children: React.ReactNode }
     setFreeUntil(until);
     setSelectedCampus(campusId);
     startFreeTimer(until);
+    scheduleFreeExpiryAlert(FREE_DURATION_MS).catch(() => {});
   }
 
   async function setNotFree() {

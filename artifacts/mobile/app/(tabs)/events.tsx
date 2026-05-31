@@ -26,7 +26,9 @@ import {
 } from "@/constants/events";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLiveActivity } from "@/contexts/LiveActivityContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { useColors } from "@/hooks/useColors";
+import { scheduleEventReminder } from "@/hooks/useNotifications";
 
 function FilterPill({
   label,
@@ -77,7 +79,22 @@ export default function EventsScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { stats } = useLiveActivity();
+  const { prefs, requestPermission } = useNotifications();
   const [activeFilter, setActiveFilter] = useState<EventFilter>("all");
+  const [remindedIds, setRemindedIds] = useState<Set<string>>(new Set());
+
+  async function handleRemind(eventId: string, title: string, venue: string, hour: number) {
+    if (remindedIds.has(eventId)) {
+      setRemindedIds((prev) => { const next = new Set(prev); next.delete(eventId); return next; });
+      return;
+    }
+    if (!prefs.eventReminders) {
+      const granted = await requestPermission();
+      if (!granted) return;
+    }
+    await scheduleEventReminder(title, venue, 30, hour);
+    setRemindedIds((prev) => new Set(prev).add(eventId));
+  }
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad =
@@ -188,7 +205,12 @@ export default function EventsScreen() {
                     return e.hour <= h && e.hour >= h - 2;
                   })
                   .map((e) => (
-                    <EventCard key={e.id} event={e} />
+                    <EventCard
+                      key={e.id}
+                      event={e}
+                      onRemind={() => handleRemind(e.id, e.title, e.venue, e.hour)}
+                      reminded={remindedIds.has(e.id)}
+                    />
                   ))}
               </View>
             )}
@@ -206,7 +228,12 @@ export default function EventsScreen() {
                   })
                 : filtered
               ).map((e) => (
-                <EventCard key={e.id} event={e} />
+                <EventCard
+                  key={e.id}
+                  event={e}
+                  onRemind={() => handleRemind(e.id, e.title, e.venue, e.hour)}
+                  reminded={remindedIds.has(e.id)}
+                />
               ))}
             </View>
           </>
