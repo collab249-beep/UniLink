@@ -1,0 +1,109 @@
+Upgrade UniLink into a production-ready university networking app.
+
+Add the following features:
+
+AUTHENTICATION & VERIFICATION
+
+* University email OTP verification system
+* Only allow approved university domains (.ac.uk, .edu, etc.)
+* Send 6-digit verification code via email
+* OTP expires after 10 minutes
+* Verified Student badge after successful verification
+* Store university name and graduation year
+* Google Sign-In support
+* Password reset flow
+
+USER PROFILES
+
+* Profile photo upload
+* First name only for privacy
+* University name
+* Course/major
+* Year of study
+* Interests and hobbies
+* Bio section
+* Verification badge
+* Online status
+
+MATCHING SYSTEM
+
+* “I’m Free Right Now” toggle
+* Find nearby students based on selected activity
+* Real-time matching
+* Distance filtering
+* Match countdown animation
+* Match confirmation screen
+
+ACTIVITY CATEGORIES
+
+* Study Together
+* Coffee Chat
+* Grab Food
+* Sports
+* Gaming
+* Events
+* Networking
+* Chill
+
+MEETUP SYSTEM
+
+* Automatic meetup creation
+* Suggested meetup locations on campus
+* Meeting timer (60 minutes)
+* Confirm attendance button
+* Participant list
+* Ability to leave meetup
+* Meetup history
+
+CHAT SYSTEM
+
+* In-app messaging
+* Match chat room
+* Send photos
+* Share location
+* Typing indicators
+* Push notifications
+
+SAFETY FEATURES
+
+* Report user
+* Block user
+* Emergency help button
+* Safety guidelines page
+* Meetup check-in reminders
+* Anonymous reporting system
+
+EVENTS SECTION
+
+* University events feed
+* Student-created events
+* RSVP system
+* Event reminders
+* Campus-specific events
+
+HOME SCREEN IMPROVEMENTS
+
+* Better modern UI
+* Active students nearby counter
+* Live activity feed
+* Trending activities
+* Quick start matching button
+
+ADMIN PANEL
+
+* Manage users
+* Manage universities
+* Review reports
+* Ban users
+* View analytics
+
+MONETIZATION (FOR FUTURE)
+
+* UniLink Premium
+* Unlimited matches
+* Advanced filters
+* Boost profile visibility
+* Exclusive events
+
+GOAL:
+Make UniLink feel like a combination of Tinder, Meetup, and Bumble BFF, designed exclusively for verified university students who want to meet in real life within the next hour.

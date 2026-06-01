@@ -17,7 +17,9 @@ export interface ParticipantProfile {
   bio?: string;
   interests?: string[];
   year?: string;
+  course?: string;
   reliabilityScore?: number;
+  isOnline?: boolean;
 }
 
 interface ProfileCardProps {
@@ -55,6 +57,7 @@ export function ProfileCard({ participant, isSelf = false }: ProfileCardProps) {
           uri={participant.profilePicture}
           size={52}
           showBorder
+          isOnline={participant.isOnline}
         />
         <View style={styles.nameCol}>
           <View style={styles.nameRow}>
@@ -80,6 +83,11 @@ export function ProfileCard({ participant, isSelf = false }: ProfileCardProps) {
                   {uniConfig.badgeLabel}
                 </Text>
               </View>
+            )}
+            {participant.course && (
+              <Text style={[styles.yearLabel, { color: colors.mutedForeground }]} numberOfLines={1}>
+                {participant.course}
+              </Text>
             )}
             {participant.year && (
               <Text style={[styles.yearLabel, { color: colors.mutedForeground }]}>

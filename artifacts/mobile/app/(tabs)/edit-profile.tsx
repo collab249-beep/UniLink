@@ -108,6 +108,7 @@ export default function EditProfileScreen() {
 
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
+  const [course, setCourse] = useState(user?.course ?? "");
   const [selectedInterests, setSelectedInterests] = useState<string[]>(
     user?.interests ?? [],
   );
@@ -125,6 +126,7 @@ export default function EditProfileScreen() {
     selectedInterests,
     selectedYear,
     user?.profilePicture,
+    course,
   );
 
   function toggleInterest(id: string) {
@@ -161,6 +163,7 @@ export default function EditProfileScreen() {
     await updateProfile({
       firstName: firstName.trim(),
       bio: bio.trim(),
+      course: course.trim(),
       interests: selectedInterests,
       year: selectedYear,
       profileComplete: completion >= 75,
@@ -237,6 +240,22 @@ export default function EditProfileScreen() {
             placeholder="First name"
             placeholderTextColor={colors.mutedForeground}
             maxLength={30}
+            returnKeyType="done"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Course / Degree</Text>
+          <TextInput
+            style={[
+              styles.input,
+              { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground },
+            ]}
+            value={course}
+            onChangeText={setCourse}
+            placeholder="e.g. Computer Science BSc, Law LLB"
+            placeholderTextColor={colors.mutedForeground}
+            maxLength={60}
             returnKeyType="done"
           />
         </View>

@@ -42,6 +42,7 @@ export default function ProfileScreen() {
     user?.interests,
     user?.year,
     user?.profilePicture,
+    user?.course,
   );
   const completionBarColor =
     completionScore >= 75 ? colors.success : completionScore >= 50 ? "#FF6D00" : colors.primary;
@@ -115,6 +116,9 @@ export default function ProfileScreen() {
                 <UniversityBadge universityId={user?.universityId ?? null} size="sm" />
                 <Text style={styles.heroUni}>{uniConfig.name}</Text>
               </View>
+            )}
+            {user?.course && (
+              <Text style={styles.heroYear}>{user.course}</Text>
             )}
             {user?.year && (
               <Text style={styles.heroYear}>{user.year}</Text>
@@ -236,6 +240,15 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
+          {user?.course && (
+            <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+              <Ionicons name="book-outline" size={20} color={colors.mutedForeground} />
+              <View style={styles.infoContent}>
+                <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>Course</Text>
+                <Text style={[styles.infoValue, { color: colors.foreground }]}>{user.course}</Text>
+              </View>
+            </View>
+          )}
           <View style={styles.infoRow}>
             <Ionicons name="mail-outline" size={20} color={colors.mutedForeground} />
             <View style={styles.infoContent}>
@@ -245,22 +258,67 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.referralRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-          onPress={() => router.push("/(tabs)/referral")}
-        >
-          <Ionicons name="gift-outline" size={20} color={colors.primary} />
-          <View style={styles.infoContent}>
-            <Text style={[styles.infoValue, { color: colors.foreground }]}>Invite Friends</Text>
-            <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-              Code: <Text style={{ fontFamily: "Inter_700Bold", color: colors.primary }}>{user?.referralCode ?? "—"}</Text>
-              {"  ·  "}{user?.referralCount ?? 0} referred
-            </Text>
+        {!user?.isPremium && (
+          <TouchableOpacity
+            style={[styles.premiumCard, { borderColor: "#7B2FFF30" }]}
+            onPress={() => router.push("/(tabs)/premium")}
+          >
+            <LinearGradient
+              colors={["#1A6BFF", "#7B2FFF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.premiumGradient}
+            >
+              <Text style={styles.premiumEmoji}>👑</Text>
+              <View style={styles.premiumText}>
+                <Text style={styles.premiumTitle}>Upgrade to Premium</Text>
+                <Text style={styles.premiumSub}>Unlimited matches · Profile boost · Exclusive events</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
+        {user?.isPremium && (
+          <View style={[styles.premiumCard, { borderColor: "#FFD70040" }]}>
+            <LinearGradient
+              colors={["#1A6BFF", "#7B2FFF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.premiumGradient}
+            >
+              <Text style={styles.premiumEmoji}>👑</Text>
+              <View style={styles.premiumText}>
+                <Text style={styles.premiumTitle}>UniLink Premium</Text>
+                <Text style={styles.premiumSub}>Active — you have unlimited access</Text>
+              </View>
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+            </LinearGradient>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-        </TouchableOpacity>
+        )}
 
         <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.infoRow, { borderBottomColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/history")}
+          >
+            <Ionicons name="time-outline" size={20} color={colors.mutedForeground} />
+            <Text style={[styles.menuLabel, { color: colors.foreground }]}>Meetup History</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.infoRow, { borderBottomColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/referral")}
+          >
+            <Ionicons name="gift-outline" size={20} color={colors.mutedForeground} />
+            <Text style={[styles.menuLabel, { color: colors.foreground }]}>Invite Friends</Text>
+            <View style={[styles.refBadge, { backgroundColor: colors.primary + "18" }]}>
+              <Text style={[styles.refBadgeText, { color: colors.primary }]}>
+                {user?.referralCode ?? "—"}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.infoRow, { borderBottomColor: colors.border }]}>
             <Ionicons name="document-text-outline" size={20} color={colors.mutedForeground} />
             <Text style={[styles.menuLabel, { color: colors.foreground }]}>Terms of Service</Text>
@@ -451,6 +509,28 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
   },
+  premiumCard: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  premiumGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 12,
+  },
+  premiumEmoji: { fontSize: 22 },
+  premiumText: { flex: 1 },
+  premiumTitle: { color: "#FFFFFF", fontSize: 15, fontFamily: "Inter_700Bold" },
+  premiumSub: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 1 },
+  refBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  refBadgeText: { fontSize: 11, fontFamily: "Inter_700Bold" },
   signOutBtn: {
     flexDirection: "row",
     alignItems: "center",

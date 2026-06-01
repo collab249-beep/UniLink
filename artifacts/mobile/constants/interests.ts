@@ -43,11 +43,13 @@ export function profileCompletionScore(
   interests?: string[],
   year?: string,
   profilePicture?: string,
+  course?: string,
 ): number {
   let score = 0;
-  if (profilePicture) score += 25;
-  if (bio && bio.trim().length > 10) score += 25;
-  if (interests && interests.length >= 3) score += 25;
-  if (year) score += 25;
+  if (profilePicture) score += 20;
+  if (bio && bio.trim().length > 10) score += 20;
+  if (interests && interests.length >= 3) score += 20;
+  if (year) score += 20;
+  if (course && course.trim().length > 2) score += 20;
   return score;
 }

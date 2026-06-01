@@ -20,35 +20,56 @@ interface AvatarProps {
   uri?: string;
   size?: number;
   showBorder?: boolean;
+  isOnline?: boolean;
 }
 
-export function Avatar({ firstName, uri, size = 48, showBorder = false }: AvatarProps) {
+export function Avatar({ firstName, uri, size = 48, showBorder = false, isOnline }: AvatarProps) {
   const colors = useColors();
   const bg = getColor(firstName);
   const initials = firstName.slice(0, 1).toUpperCase();
+  const dotSize = Math.max(10, Math.round(size * 0.26));
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: bg,
-          borderWidth: showBorder ? 3 : 0,
-          borderColor: showBorder ? colors.background : "transparent",
-        },
-      ]}
-    >
-      {uri ? (
-        <Image
-          source={{ uri }}
-          style={{ width: size, height: size, borderRadius: size / 2 }}
-          contentFit="cover"
+    <View style={{ width: size, height: size }}>
+      <View
+        style={[
+          styles.container,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: bg,
+            borderWidth: showBorder ? 3 : 0,
+            borderColor: showBorder ? colors.background : "transparent",
+          },
+        ]}
+      >
+        {uri ? (
+          <Image
+            source={{ uri }}
+            style={{ width: size, height: size, borderRadius: size / 2 }}
+            contentFit="cover"
+          />
+        ) : (
+          <Text style={[styles.initials, { fontSize: size * 0.38 }]}>{initials}</Text>
+        )}
+      </View>
+      {isOnline && (
+        <View
+          style={[
+            styles.onlineDot,
+            {
+              width: dotSize,
+              height: dotSize,
+              borderRadius: dotSize / 2,
+              bottom: showBorder ? 0 : -1,
+              right: showBorder ? 0 : -1,
+              borderWidth: Math.max(1.5, dotSize * 0.18),
+              borderColor: colors.background,
+              backgroundColor: "#00C853",
+            },
+          ]}
         />
-      ) : (
-        <Text style={[styles.initials, { fontSize: size * 0.38 }]}>{initials}</Text>
       )}
     </View>
   );
@@ -64,5 +85,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: "Inter_700Bold",
     lineHeight: undefined,
+  },
+  onlineDot: {
+    position: "absolute",
   },
 });

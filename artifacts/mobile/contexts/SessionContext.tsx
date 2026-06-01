@@ -5,6 +5,7 @@ import { ACTIVITIES, ActivityType, FAKE_PARTICIPANTS } from "@/constants/activit
 import { CAMPUSES, getSpotForActivity } from "@/constants/universities";
 
 const STORAGE_KEY = "unilink:session";
+const HISTORY_KEY = "unilink:history";
 const SESSION_DURATION_MS = 30 * 60 * 1000;
 const SESSION_EXPIRY_MS = 60 * 60 * 1000;
 
@@ -27,9 +28,21 @@ export interface MeetupSession {
   attendanceConfirmed: boolean;
 }
 
+export interface MeetupHistoryItem {
+  id: string;
+  activity: ActivityType;
+  participants: Participant[];
+  location: string;
+  campus: string;
+  startTime: number;
+  endTime: number;
+  attendanceConfirmed: boolean;
+}
+
 interface SessionContextType {
   session: MeetupSession | null;
   timeRemaining: number;
+  history: MeetupHistoryItem[];
   createSession: (
     activity: ActivityType,
     campusId: string,
@@ -50,6 +63,7 @@ function pickRandom<T>(arr: T[], count: number): T[] {
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<MeetupSession | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [history, setHistory] = useState<MeetupHistoryItem[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -59,6 +73,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         if (Date.now() < s.expiresAt) { setSession(s); startTimer(s); }
         else AsyncStorage.removeItem(STORAGE_KEY);
       }
+    });
+    AsyncStorage.getItem(HISTORY_KEY).then((raw) => {
+      if (raw) setHistory(JSON.parse(raw) as MeetupHistoryItem[]);
     });
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
@@ -119,13 +136,28 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   async function leaveSession() {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (session) {
+      const item: MeetupHistoryItem = {
+        id: session.id,
+        activity: session.activity,
+        participants: session.participants,
+        location: session.location,
+        campus: session.campus,
+        startTime: session.startTime,
+        endTime: Date.now(),
+        attendanceConfirmed: session.attendanceConfirmed,
+      };
+      const updated = [item, ...history].slice(0, 50);
+      setHistory(updated);
+      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    }
     await AsyncStorage.removeItem(STORAGE_KEY);
     setSession(null);
     setTimeRemaining(0);
   }
 
   return (
-    <SessionContext.Provider value={{ session, timeRemaining, createSession, confirmAttendance, leaveSession }}>
+    <SessionContext.Provider value={{ session, timeRemaining, history, createSession, confirmAttendance, leaveSession }}>
       {children}
     </SessionContext.Provider>
   );

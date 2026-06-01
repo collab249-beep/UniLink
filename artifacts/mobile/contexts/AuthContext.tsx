@@ -23,7 +23,9 @@ export interface UserProfile {
   bio?: string;
   interests?: string[];
   year?: string;
+  course?: string;
   profileComplete?: boolean;
+  isPremium?: boolean;
 }
 
 interface AuthContextType {
@@ -34,7 +36,7 @@ interface AuthContextType {
   signUp: (firstName: string, email: string, password: string) => Promise<UserProfile>;
   verifyUniversity: (universityEmail: string) => Promise<void>;
   updateProfilePicture: (uri: string) => Promise<void>;
-  updateProfile: (fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "firstName" | "profileComplete">>) => Promise<void>;
+  updateProfile: (fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "course" | "firstName" | "profileComplete" | "isPremium">>) => Promise<void>;
   signOut: () => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
   reportUser: (userId: string) => Promise<void>;
@@ -149,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function updateProfile(
-    fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "firstName" | "profileComplete">>,
+    fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "course" | "firstName" | "profileComplete" | "isPremium">>,
   ) {
     if (!user) return;
     await saveUser({ ...user, ...fields });
