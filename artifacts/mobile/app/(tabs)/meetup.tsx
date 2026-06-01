@@ -151,7 +151,7 @@ export default function MeetupScreen() {
                   id: p.id,
                   firstName: p.firstName,
                   university: p.university,
-                  universityId: (p as any).universityId ?? null,
+                  universityId: ((p as any).universityId ?? null) as import("@/constants/universities").UniversityId | null,
                   profilePicture: p.profilePicture,
                   bio: isSelf ? user?.bio : (sim as any).bio,
                   interests: isSelf ? user?.interests : (sim as any).interests,

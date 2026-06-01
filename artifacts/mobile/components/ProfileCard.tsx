@@ -5,14 +5,14 @@ import { StyleSheet, Text, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { UniversityBadge } from "@/components/UniversityBadge";
 import { INTERESTS } from "@/constants/interests";
-import { UNIVERSITIES } from "@/constants/universities";
+import { UniversityId, UNIVERSITIES } from "@/constants/universities";
 import { useColors } from "@/hooks/useColors";
 
 export interface ParticipantProfile {
   id: string;
   firstName: string;
   university: string;
-  universityId?: string | null;
+  universityId?: UniversityId | null;
   profilePicture?: string;
   bio?: string;
   interests?: string[];
