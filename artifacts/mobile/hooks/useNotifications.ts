@@ -9,10 +9,9 @@ export type NotificationChannel =
 
 export async function requestNotificationPermission(): Promise<boolean> {
   if (Platform.OS === "web") return false;
-  type P = { granted?: boolean };
-  const existing = ((await Notifications.getPermissionsAsync()) as unknown as P).granted;
+  const { granted: existing } = await Notifications.getPermissionsAsync();
   if (existing) return true;
-  const granted = !!((await Notifications.requestPermissionsAsync()) as unknown as P).granted;
+  const { granted } = await Notifications.requestPermissionsAsync();
   return granted;
 }
 

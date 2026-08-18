@@ -60,8 +60,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     });
 
     if (Platform.OS !== "web") {
-      Notifications.getPermissionsAsync().then((r) => {
-        setPermissionGranted(!!(r as unknown as { granted?: boolean }).granted);
+      Notifications.getPermissionsAsync().then(({ granted }) => {
+        setPermissionGranted(granted);
       });
 
       receivedListener.current = Notifications.addNotificationReceivedListener(
@@ -89,13 +89,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   async function requestPermission(): Promise<boolean> {
     if (Platform.OS === "web") return false;
-    type P = { granted?: boolean };
-    const existing = (await Notifications.getPermissionsAsync() as unknown as P).granted;
+    const { granted: existing } = await Notifications.getPermissionsAsync();
     if (existing) {
       setPermissionGranted(true);
       return true;
     }
-    const granted = !!((await Notifications.requestPermissionsAsync()) as unknown as P).granted;
+    const { granted } = await Notifications.requestPermissionsAsync();
     setPermissionGranted(granted);
     return granted;
   }
