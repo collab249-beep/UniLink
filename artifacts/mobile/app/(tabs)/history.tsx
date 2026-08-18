@@ -70,7 +70,7 @@ export default function HistoryScreen() {
           </Text>
           <TouchableOpacity
             style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.replace("/(tabs)/")}
+            onPress={() => router.replace("/(tabs)")}
           >
             <Ionicons name="flash" size={16} color="#FFFFFF" />
             <Text style={styles.emptyBtnText}>Find a Meetup</Text>

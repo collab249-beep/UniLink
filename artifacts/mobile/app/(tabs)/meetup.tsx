@@ -20,7 +20,7 @@ import { SafetySheet } from "@/components/SafetySheet";
 import { ACTIVITIES } from "@/constants/activities";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/contexts/ChatContext";
-import { useSession } from "@/contexts/SessionContext";
+import { useSession, type Participant } from "@/contexts/SessionContext";
 import { useColors } from "@/hooks/useColors";
 
 export default function MeetupScreen() {
@@ -35,7 +35,7 @@ export default function MeetupScreen() {
   const bottomPad = Platform.OS === "web" ? Math.max(insets.bottom, 34) : insets.bottom;
 
   if (!session) {
-    router.replace("/(tabs)/");
+    router.replace("/(tabs)");
     return null;
   }
 
@@ -51,7 +51,7 @@ export default function MeetupScreen() {
       reliabilityScore: 92,
     },
   };
-  function getSimProfile(participant: typeof session.participants[0]) {
+  function getSimProfile(participant: Participant) {
     const seed = participant.firstName.charCodeAt(0) % 4;
     const bios = [
       "CS student who loves football and grabbing coffee between lectures ☕⚽",
@@ -82,7 +82,7 @@ export default function MeetupScreen() {
 
   async function handleLeave() {
     await leaveSession();
-    router.replace("/(tabs)/");
+    router.replace("/(tabs)");
   }
 
   async function handleReport() {
@@ -92,7 +92,7 @@ export default function MeetupScreen() {
   async function handleBlock() {
     if (firstOther) await blockUser(firstOther.id);
     await leaveSession();
-    router.replace("/(tabs)/");
+    router.replace("/(tabs)");
   }
 
   const isExpired = timeRemaining === 0;
@@ -193,7 +193,7 @@ export default function MeetupScreen() {
         {isExpired && (
           <TouchableOpacity
             style={[styles.confirmBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.replace("/(tabs)/")}
+            onPress={() => router.replace("/(tabs)")}
           >
             <Text style={styles.confirmBtnText}>Back to Home</Text>
           </TouchableOpacity>

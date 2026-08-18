@@ -19,5 +19,5 @@ export default function Index() {
 
   if (!user) return <Redirect href="/(auth)/login" />;
   if (!user.isVerified) return <Redirect href="/(auth)/verify" />;
-  return <Redirect href="/(tabs)/" />;
+  return <Redirect href="/(tabs)" />;
 }

@@ -11,6 +11,7 @@ export type ActivityType =
 export interface ActivityConfig {
   id: ActivityType;
   label: string;
+  emoji: string;
   iconLib: "Ionicons";
   iconName: string;
   gradientStart: string;
@@ -22,6 +23,7 @@ export const ACTIVITIES: ActivityConfig[] = [
   {
     id: "study",
     label: "Study Together",
+    emoji: "📚",
     iconLib: "Ionicons",
     iconName: "book",
     gradientStart: "#1A6BFF",
@@ -31,6 +33,7 @@ export const ACTIVITIES: ActivityConfig[] = [
   {
     id: "coffee",
     label: "Coffee Chat",
+    emoji: "☕",
     iconLib: "Ionicons",
     iconName: "cafe",
     gradientStart: "#795548",
@@ -40,6 +43,7 @@ export const ACTIVITIES: ActivityConfig[] = [
   {
     id: "lunch",
     label: "Lunch",
+    emoji: "🍜",
     iconLib: "Ionicons",
     iconName: "restaurant",
     gradientStart: "#FF6B35",
@@ -49,6 +53,7 @@ export const ACTIVITIES: ActivityConfig[] = [
   {
     id: "football",
     label: "Football",
+    emoji: "⚽",
     iconLib: "Ionicons",
     iconName: "football",
     gradientStart: "#00C853",
@@ -58,6 +63,7 @@ export const ACTIVITIES: ActivityConfig[] = [
   {
     id: "gym",
     label: "Gym Partner",
+    emoji: "💪",
     iconLib: "Ionicons",
     iconName: "barbell",
     gradientStart: "#F44336",
@@ -67,6 +73,7 @@ export const ACTIVITIES: ActivityConfig[] = [
   {
     id: "gaming",
     label: "Gaming",
+    emoji: "🎮",
     iconLib: "Ionicons",
     iconName: "game-controller",
     gradientStart: "#9C27B0",
@@ -76,6 +83,7 @@ export const ACTIVITIES: ActivityConfig[] = [
   {
     id: "night_out",
     label: "Night Out",
+    emoji: "🎉",
     iconLib: "Ionicons",
     iconName: "moon",
     gradientStart: "#1A237E",
@@ -85,6 +93,7 @@ export const ACTIVITIES: ActivityConfig[] = [
   {
     id: "society",
     label: "Society Meetup",
+    emoji: "🎓",
     iconLib: "Ionicons",
     iconName: "people",
     gradientStart: "#00897B",

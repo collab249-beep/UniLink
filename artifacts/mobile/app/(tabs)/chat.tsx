@@ -158,7 +158,7 @@ export default function ChatScreen() {
   }, [messages.length, isTyping]);
 
   if (!session) {
-    router.replace("/(tabs)/");
+    router.replace("/(tabs)");
     return null;
   }
 

@@ -43,7 +43,7 @@ export default function SetupScreen() {
   }
 
   function handleContinue() {
-    router.replace("/(tabs)/");
+    router.replace("/(tabs)");
   }
 
   return (

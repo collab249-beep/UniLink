@@ -9,10 +9,11 @@ export type NotificationChannel =
 
 export async function requestNotificationPermission(): Promise<boolean> {
   if (Platform.OS === "web") return false;
-  const { status: existing } = await Notifications.getPermissionsAsync();
-  if (existing === "granted") return true;
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === "granted";
+  type P = { granted?: boolean };
+  const existing = ((await Notifications.getPermissionsAsync()) as unknown as P).granted;
+  if (existing) return true;
+  const granted = !!((await Notifications.requestPermissionsAsync()) as unknown as P).granted;
+  return granted;
 }
 
 export async function scheduleGroupActivityAlert(

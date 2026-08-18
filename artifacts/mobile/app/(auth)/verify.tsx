@@ -108,7 +108,7 @@ export default function VerifyScreen() {
           {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.btnText}>Verify & Join</Text>}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.replace("/(tabs)/")}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
           <Text style={[styles.skip, { color: colors.mutedForeground }]}>Skip for now</Text>
         </TouchableOpacity>
       </ScrollView>

@@ -33,7 +33,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInWithGoogle();
-      router.replace("/(tabs)/");
+      router.replace("/(tabs)");
     } catch {
       Alert.alert("Error", "Sign in failed. Please try again.");
     } finally {
@@ -49,7 +49,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
-      router.replace("/(tabs)/");
+      router.replace("/(tabs)");
     } catch {
       Alert.alert("Error", "Sign in failed. Please try again.");
     } finally {
