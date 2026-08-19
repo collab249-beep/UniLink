@@ -166,9 +166,10 @@ overrides:
   "brace-expansion@1": "^1.1.18"
   "brace-expansion@2": "^2.1.4"
   "brace-expansion@5": "^5.0.9"
-  # Security: fix vulnerable transitive dependency (CVE-2025-71329)
-  # Note: image-size >=2.0.2 has new unpatched advisories (no fix released by upstream yet)
-  image-size: "^2.0.2"
+  # image-size@2.x uses TextDecoder.decode() in a way that Node rejects at runtime
+  # (non-BufferSource argument), crashing Metro's asset transformer. Pin to 1.2.1
+  # which uses synchronous fs.readSync and avoids the issue entirely.
+  image-size: "1.2.1"
   # Security: fix vulnerable transitive dependency (CVE-2026-59869)
   "js-yaml@4": "^4.3.1"
   # Security: fix vulnerable js-yaml 3.x (multiple quadratic-complexity DoS CVEs)
