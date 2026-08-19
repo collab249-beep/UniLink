@@ -1,0 +1,50 @@
+[
+  {
+    "id": "1a2b3c4d-0001-0001-0001-000000000001",
+    "position": 1,
+    "filepath": "src/pages/slides/Slide1Title.tsx",
+    "title": "UniLink",
+    "description": "Cover slide introducing UniLink — a university social app for real-life student connections.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "1a2b3c4d-0002-0002-0002-000000000002",
+    "position": 2,
+    "filepath": "src/pages/slides/Slide2Problem.tsx",
+    "title": "University life can feel lonely",
+    "description": "The problem: students struggle to make real-life connections despite being surrounded by peers.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "1a2b3c4d-0003-0003-0003-000000000003",
+    "position": 3,
+    "filepath": "src/pages/slides/Slide3Solution.tsx",
+    "title": "UniLink: real connections, zero friction",
+    "description": "The solution: UniLink instantly matches students for real-life meetups with no back-and-forth.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "1a2b3c4d-0004-0004-0004-000000000004",
+    "position": 4,
+    "filepath": "src/pages/slides/Slide4HowItWorks.tsx",
+    "title": "How it works",
+    "description": "4-step process: pick an activity, go live, get matched, show up.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "1a2b3c4d-0005-0005-0005-000000000005",
+    "position": 5,
+    "filepath": "src/pages/slides/Slide5Features.tsx",
+    "title": "Built for students, by design",
+    "description": "Key platform features: live activity feed, smart matching, in-app chat, meetup sessions, push notifications.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "1a2b3c4d-0006-0006-0006-000000000006",
+    "position": 6,
+    "filepath": "src/pages/slides/Slide6CTA.tsx",
+    "title": "Join UniLink",
+    "description": "Closing call-to-action: real friends, real places, right now.",
+    "speakerNotes": ""
+  }
+]

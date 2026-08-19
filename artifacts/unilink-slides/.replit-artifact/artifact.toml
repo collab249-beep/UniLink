@@ -1,0 +1,28 @@
+kind = "slides"
+previewPath = "/unilink-slides/"
+title = "UniLink"
+description = "6-slide presentation deck about UniLink — a university social app that helps students meet in real life, right now. Fitness Athletics template: bold dark aesthetic with orange diagonal stripes."
+version = "1.0.0"
+id = "artifacts/unilink-slides"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/unilink-slides/" ]
+localPort = 25317
+
+[services.development]
+run = "pnpm --filter @workspace/unilink-slides run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/unilink-slides", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/unilink-slides/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25317"
+BASE_PATH = "/unilink-slides/"
