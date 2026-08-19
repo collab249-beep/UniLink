@@ -1,13 +1,9 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 
-import { ACTIVITIES, ActivityType, FAKE_PARTICIPANTS } from "@/constants/activities";
-import { CAMPUSES, getSpotForActivity } from "@/constants/universities";
+import { ActivityType } from "@/constants/activities";
+import { api, type ApiHistoryItem, type ApiSession } from "@/lib/api";
 
-const STORAGE_KEY = "unilink:session";
-const HISTORY_KEY = "unilink:history";
 const SESSION_DURATION_MS = 30 * 60 * 1000;
-const SESSION_EXPIRY_MS = 60 * 60 * 1000;
 
 export interface Participant {
   id: string;
@@ -56,8 +52,41 @@ interface SessionContextType {
 
 const SessionContext = createContext<SessionContextType | null>(null);
 
-function pickRandom<T>(arr: T[], count: number): T[] {
-  return [...arr].sort(() => Math.random() - 0.5).slice(0, count);
+function apiSessionToMeetup(s: ApiSession): MeetupSession {
+  return {
+    id: s.id,
+    activity: s.activity as ActivityType,
+    participants: s.participants.map((p) => ({
+      id: p.id,
+      firstName: p.firstName,
+      university: p.university ?? "University",
+      profilePicture: p.profilePicture ?? undefined,
+    })),
+    location: s.location,
+    campus: s.campus,
+    startTime: s.startTime,
+    meetDeadline: s.meetDeadline,
+    expiresAt: s.expiresAt,
+    attendanceConfirmed: s.attendanceConfirmed,
+  };
+}
+
+function apiHistoryToItem(h: ApiHistoryItem): MeetupHistoryItem {
+  return {
+    id: h.id,
+    activity: h.activity as ActivityType,
+    participants: h.participants.map((p) => ({
+      id: p.id,
+      firstName: p.firstName,
+      university: p.university ?? "University",
+      profilePicture: p.profilePicture ?? undefined,
+    })),
+    location: h.location,
+    campus: h.campus,
+    startTime: h.startTime,
+    endTime: h.endTime,
+    attendanceConfirmed: h.attendanceConfirmed,
+  };
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
@@ -66,17 +95,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<MeetupHistoryItem[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Restore active session and history on mount
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
-      if (raw) {
-        const s = JSON.parse(raw) as MeetupSession;
-        if (Date.now() < s.expiresAt) { setSession(s); startTimer(s); }
-        else AsyncStorage.removeItem(STORAGE_KEY);
-      }
-    });
-    AsyncStorage.getItem(HISTORY_KEY).then((raw) => {
-      if (raw) setHistory(JSON.parse(raw) as MeetupHistoryItem[]);
-    });
+    api.sessions.getActive()
+      .then(({ session: s }) => {
+        if (s) {
+          const m = apiSessionToMeetup(s);
+          setSession(m);
+          startTimer(m);
+        }
+      })
+      .catch(() => {});
+
+    api.sessions.getHistory()
+      .then(({ history: h }) => setHistory(h.map(apiHistoryToItem)))
+      .catch(() => {});
+
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
@@ -94,49 +128,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   async function createSession(
     activity: ActivityType,
     campusId: string,
-    currentUserId: string,
-    currentFirstName: string,
-    currentUniversity: string,
+    _currentUserId: string,
+    _currentFirstName: string,
+    _currentUniversity: string,
   ): Promise<MeetupSession> {
-    const campus = CAMPUSES.find((c) => c.id === campusId);
-    const location = campus
-      ? getSpotForActivity(campusId, activity)
-      : ACTIVITIES.find((a) => a.id === activity)?.label ?? "Campus";
-
-    const otherCount = Math.floor(Math.random() * 3) + 1;
-    const others = pickRandom(FAKE_PARTICIPANTS, otherCount);
-    const participants: Participant[] = [
-      { id: currentUserId, firstName: currentFirstName, university: currentUniversity },
-      ...others,
-    ];
-    const now = Date.now();
-    const s: MeetupSession = {
-      id: now.toString() + Math.random().toString(36).slice(2, 9),
-      activity,
-      participants,
-      location,
-      campus: campus?.name ?? "Campus",
-      startTime: now,
-      meetDeadline: now + SESSION_DURATION_MS,
-      expiresAt: now + SESSION_EXPIRY_MS,
-      attendanceConfirmed: false,
-    };
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-    setSession(s);
-    startTimer(s);
-    return s;
+    const { session: s } = await api.sessions.create({ activity, campusId });
+    if (!s) throw new Error("Failed to create session");
+    const meetup = apiSessionToMeetup(s);
+    setSession(meetup);
+    startTimer(meetup);
+    return meetup;
   }
 
   async function confirmAttendance() {
-    if (!session) return;
-    const updated = { ...session, attendanceConfirmed: true };
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setSession(updated);
+    const { session: s } = await api.sessions.confirmAttendance();
+    if (s) setSession(apiSessionToMeetup(s));
   }
 
   async function leaveSession() {
     if (timerRef.current) clearInterval(timerRef.current);
     if (session) {
+      // Optimistically add to history
       const item: MeetupHistoryItem = {
         id: session.id,
         activity: session.activity,
@@ -147,11 +159,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         endTime: Date.now(),
         attendanceConfirmed: session.attendanceConfirmed,
       };
-      const updated = [item, ...history].slice(0, 50);
-      setHistory(updated);
-      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+      setHistory((prev) => [item, ...prev].slice(0, 50));
     }
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    await api.sessions.leave().catch(() => {});
     setSession(null);
     setTimeRemaining(0);
   }

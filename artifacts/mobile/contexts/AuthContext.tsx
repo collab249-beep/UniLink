@@ -1,9 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-import { UniversityId, detectNottinghamUniversity } from "@/constants/universities";
+import { UniversityId } from "@/constants/universities";
+import { api, clearToken, getToken, setToken, type ApiUser } from "@/lib/api";
 
-const STORAGE_KEY = "unilink:user";
+const SOCIAL_KEY = "unilink:social"; // local-only: blocked/reported user IDs
 
 export interface UserProfile {
   id: string;
@@ -28,6 +29,11 @@ export interface UserProfile {
   isPremium?: boolean;
 }
 
+interface SocialData {
+  blockedUsers: string[];
+  reportedUsers: string[];
+}
+
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
@@ -44,10 +50,42 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function generateReferralCode(firstName: string): string {
-  const base = firstName.toUpperCase().slice(0, 4).padEnd(4, "X");
-  const num = Math.floor(1000 + Math.random() * 9000);
-  return `${base}${num}`;
+async function loadSocial(): Promise<SocialData> {
+  try {
+    const raw = await AsyncStorage.getItem(SOCIAL_KEY);
+    return raw ? JSON.parse(raw) : { blockedUsers: [], reportedUsers: [] };
+  } catch {
+    return { blockedUsers: [], reportedUsers: [] };
+  }
+}
+
+async function saveSocial(data: SocialData) {
+  await AsyncStorage.setItem(SOCIAL_KEY, JSON.stringify(data));
+}
+
+function apiUserToProfile(apiUser: ApiUser, social: SocialData): UserProfile {
+  return {
+    id: apiUser.id,
+    firstName: apiUser.firstName,
+    email: apiUser.email,
+    universityEmail: apiUser.universityEmail ?? "",
+    universityId: (apiUser.universityId as UniversityId | null) ?? null,
+    university: apiUser.university ?? "",
+    profilePicture: apiUser.profilePicture ?? undefined,
+    isVerified: apiUser.isVerified,
+    reliabilityScore: apiUser.reliabilityScore,
+    referralCode: apiUser.referralCode,
+    referralCount: apiUser.referralCount,
+    isAmbassador: apiUser.isAmbassador,
+    bio: apiUser.bio ?? undefined,
+    interests: apiUser.interests ?? undefined,
+    year: apiUser.year ?? undefined,
+    course: apiUser.course ?? undefined,
+    profileComplete: apiUser.isProfileComplete,
+    isPremium: apiUser.isPremium,
+    blockedUsers: social.blockedUsers,
+    reportedUsers: social.reportedUsers,
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -55,123 +93,110 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => { if (raw) setUser(JSON.parse(raw) as UserProfile); })
-      .finally(() => setIsLoading(false));
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const [{ user: apiUser }, social] = await Promise.all([api.auth.me(), loadSocial()]);
+        setUser(apiUserToProfile(apiUser, social));
+      } catch {
+        // Token expired or invalid — clear it
+        await clearToken();
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
-  async function saveUser(profile: UserProfile) {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  async function handleAuthResponse(token: string, apiUser: ApiUser) {
+    await setToken(token);
+    const social = await loadSocial();
+    const profile = apiUserToProfile(apiUser, social);
     setUser(profile);
-  }
-
-  function makeProfile(firstName: string, email: string, overrides?: Partial<UserProfile>): UserProfile {
-    return {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
-      firstName,
-      email,
-      universityEmail: "",
-      universityId: null,
-      university: "",
-      isVerified: false,
-      reliabilityScore: 100,
-      referralCode: generateReferralCode(firstName),
-      referralCount: 0,
-      isAmbassador: false,
-      blockedUsers: [],
-      reportedUsers: [],
-      ...overrides,
-    };
+    return profile;
   }
 
   async function signInWithGoogle() {
-    const profile = makeProfile("Alex", "alex@nottingham.ac.uk", {
-      universityEmail: "alex@nottingham.ac.uk",
-      universityId: "uon",
-      university: "University of Nottingham",
-      isVerified: true,
-    });
-    await saveUser(profile);
+    // Demo flow: always sign in as Alex
+    const { token, user: apiUser } = await api.auth.signIn("alex@nottingham.ac.uk");
+    // Ensure verified UoN profile
+    await handleAuthResponse(token, apiUser);
+    try {
+      const { user: verified } = await api.auth.verify("alex@nottingham.ac.uk");
+      const social = await loadSocial();
+      setUser(apiUserToProfile(verified, social));
+    } catch {}
   }
 
   async function signIn(email: string, _password: string) {
-    const profile = makeProfile(email.split("@")[0] ?? "Student", email, {
-      universityEmail: email,
-      universityId: null,
-      university: "",
-      isVerified: false,
-    });
-    await saveUser(profile);
+    const { token, user: apiUser } = await api.auth.signIn(email);
+    await handleAuthResponse(token, apiUser);
   }
 
   async function signUp(firstName: string, email: string, _password: string): Promise<UserProfile> {
-    const profile = makeProfile(firstName, email);
-    await saveUser(profile);
+    const { token, user: apiUser } = await api.auth.signUp({ firstName, email });
+    const profile = await handleAuthResponse(token, apiUser);
     return profile;
   }
 
   async function verifyUniversity(universityEmail: string) {
-    const trimmed = universityEmail.trim().toLowerCase();
-    const uniConfig = detectNottinghamUniversity(trimmed);
-
-    if (!uniConfig) {
-      const domain = trimmed.split("@")[1] ?? "";
-      const isOtherUni = [".edu", ".ac.uk", ".edu.au", ".ac.nz"].some((d) => domain.endsWith(d));
-      if (!isOtherUni) {
-        throw new Error(
-          "Please use your University of Nottingham (@nottingham.ac.uk) or NTU (@ntu.ac.uk) email address.",
-        );
-      }
-      if (!user) throw new Error("Not signed in");
-      const updated: UserProfile = {
-        ...user,
-        universityEmail: trimmed,
-        universityId: "other",
-        university: "Other University",
-        isVerified: true,
-      };
-      await saveUser(updated);
-      return;
-    }
-
-    if (!user) throw new Error("Not signed in");
-    const updated: UserProfile = {
-      ...user,
-      universityEmail: trimmed,
-      universityId: uniConfig.id,
-      university: uniConfig.name,
-      isVerified: true,
-    };
-    await saveUser(updated);
+    const { user: apiUser } = await api.auth.verify(universityEmail.trim().toLowerCase());
+    const social = await loadSocial();
+    setUser(apiUserToProfile(apiUser, social));
   }
 
   async function updateProfilePicture(uri: string) {
-    if (!user) return;
-    await saveUser({ ...user, profilePicture: uri });
+    const { user: apiUser } = await api.auth.updateProfile({ profilePicture: uri });
+    const social = await loadSocial();
+    setUser(apiUserToProfile(apiUser, social));
   }
 
   async function updateProfile(
     fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "course" | "firstName" | "profileComplete" | "isPremium">>,
   ) {
-    if (!user) return;
-    await saveUser({ ...user, ...fields });
+    const apiFields: Record<string, unknown> = {};
+    if (fields.bio !== undefined) apiFields.bio = fields.bio;
+    if (fields.interests !== undefined) apiFields.interests = fields.interests;
+    if (fields.year !== undefined) apiFields.year = fields.year;
+    if (fields.course !== undefined) apiFields.course = fields.course;
+    if (fields.firstName !== undefined) apiFields.firstName = fields.firstName;
+    if (fields.profileComplete !== undefined) apiFields.isProfileComplete = fields.profileComplete;
+    if (fields.isPremium !== undefined) apiFields.isPremium = fields.isPremium;
+
+    const { user: apiUser } = await api.auth.updateProfile(apiFields as Parameters<typeof api.auth.updateProfile>[0]);
+    const social = await loadSocial();
+    setUser(apiUserToProfile(apiUser, social));
   }
 
   async function signOut() {
-    await AsyncStorage.removeItem(STORAGE_KEY);
-    await AsyncStorage.removeItem("unilink:session");
-    await AsyncStorage.removeItem("unilink:free");
+    try {
+      await api.auth.signOut();
+    } catch {}
+    await clearToken();
+    await AsyncStorage.multiRemove([SOCIAL_KEY, "unilink:session", "unilink:free"]);
     setUser(null);
   }
 
   async function blockUser(userId: string) {
-    if (!user) return;
-    await saveUser({ ...user, blockedUsers: [...new Set([...user.blockedUsers, userId])] });
+    const social = await loadSocial();
+    const updated: SocialData = {
+      ...social,
+      blockedUsers: [...new Set([...social.blockedUsers, userId])],
+    };
+    await saveSocial(updated);
+    setUser((u) => u ? { ...u, blockedUsers: updated.blockedUsers } : u);
+    api.auth.block(userId).catch(() => {});
   }
 
   async function reportUser(userId: string) {
-    if (!user) return;
-    await saveUser({ ...user, reportedUsers: [...new Set([...user.reportedUsers, userId])] });
+    const social = await loadSocial();
+    const updated: SocialData = {
+      ...social,
+      reportedUsers: [...new Set([...social.reportedUsers, userId])],
+    };
+    await saveSocial(updated);
+    setUser((u) => u ? { ...u, reportedUsers: updated.reportedUsers } : u);
+    api.auth.report(userId).catch(() => {});
   }
 
   return (

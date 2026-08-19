@@ -10,6 +10,8 @@ import React, {
 } from "react";
 import { Platform } from "react-native";
 
+import { api, getToken } from "@/lib/api";
+
 export interface NotificationPrefs {
   groupActivity: boolean;
   eventReminders: boolean;
@@ -51,11 +53,26 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const router = useRouter();
 
   useEffect(() => {
-    AsyncStorage.getItem("notification_prefs").then((raw) => {
-      if (raw) {
-        try {
-          setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
-        } catch {}
+    // Try to load from API; fall back to AsyncStorage cache
+    getToken().then((token) => {
+      if (token) {
+        api.notifications.getPrefs()
+          .then(({ prefs: p }) => setPrefs({ ...DEFAULT_PREFS, ...p }))
+          .catch(() => {
+            // Fall back to local cache
+            AsyncStorage.getItem("notification_prefs").then((raw) => {
+              if (raw) {
+                try { setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) }); } catch {}
+              }
+            });
+          });
+      } else {
+        // Not logged in — load from local cache
+        AsyncStorage.getItem("notification_prefs").then((raw) => {
+          if (raw) {
+            try { setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) }); } catch {}
+          }
+        });
       }
     });
 
@@ -64,21 +81,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setPermissionGranted(granted);
       });
 
-      receivedListener.current = Notifications.addNotificationReceivedListener(
-        () => {
-          setUnreadCount((c) => c + 1);
-        },
-      );
+      receivedListener.current = Notifications.addNotificationReceivedListener(() => {
+        setUnreadCount((c) => c + 1);
+      });
 
-      responseListener.current =
-        Notifications.addNotificationResponseReceivedListener((response) => {
-          const data = response.notification.request.content.data as Record<string, string>;
-          if (data?.type === "group_activity" || data?.type === "nearby_students") {
-            router.push("/(tabs)/matching");
-          } else if (data?.type === "event_reminder") {
-            router.push("/(tabs)/events");
-          }
-        });
+      responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data as Record<string, string>;
+        if (data?.type === "group_activity" || data?.type === "nearby_students") {
+          router.push("/(tabs)/matching");
+        } else if (data?.type === "event_reminder") {
+          router.push("/(tabs)/events");
+        }
+      });
     }
 
     return () => {
@@ -90,10 +104,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   async function requestPermission(): Promise<boolean> {
     if (Platform.OS === "web") return false;
     const { granted: existing } = await Notifications.getPermissionsAsync();
-    if (existing) {
-      setPermissionGranted(true);
-      return true;
-    }
+    if (existing) { setPermissionGranted(true); return true; }
     const { granted } = await Notifications.requestPermissionsAsync();
     setPermissionGranted(granted);
     return granted;
@@ -102,7 +113,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   function updatePref(key: keyof NotificationPrefs, value: boolean) {
     setPrefs((prev) => {
       const next = { ...prev, [key]: value };
+      // Persist locally as cache
       AsyncStorage.setItem("notification_prefs", JSON.stringify(next));
+      // Sync to server
+      getToken().then((token) => {
+        if (token) api.notifications.updatePrefs({ [key]: value }).catch(() => {});
+      });
       return next;
     });
   }

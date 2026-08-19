@@ -55,17 +55,17 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <NotificationProvider>
-              <ChatProvider>
-                <LiveActivityProvider>
-                  <SessionProvider>
+              <LiveActivityProvider>
+                <SessionProvider>
+                  <ChatProvider>
                     <GestureHandlerRootView style={{ flex: 1 }}>
                       <KeyboardProvider>
                         <RootLayoutNav />
                       </KeyboardProvider>
                     </GestureHandlerRootView>
-                  </SessionProvider>
-                </LiveActivityProvider>
-              </ChatProvider>
+                  </ChatProvider>
+                </SessionProvider>
+              </LiveActivityProvider>
             </NotificationProvider>
           </AuthProvider>
         </QueryClientProvider>

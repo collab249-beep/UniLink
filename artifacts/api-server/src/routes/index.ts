@@ -1,8 +1,18 @@
-import { Router, type IRouter } from "express";
-import healthRouter from "./health";
+import { Router } from "express";
+import authRouter from "./auth.js";
+import chatRouter from "./chat.js";
+import healthRouter from "./health.js";
+import liveRouter from "./live.js";
+import notificationsRouter from "./notifications.js";
+import sessionsRouter from "./sessions.js";
 
-const router: IRouter = Router();
+const router = Router();
 
-router.use(healthRouter);
+router.use("/healthz", healthRouter);
+router.use("/auth", authRouter);
+router.use("/live", liveRouter);
+router.use("/sessions", sessionsRouter);
+router.use("/chat", chatRouter);
+router.use("/notifications", notificationsRouter);
 
 export default router;

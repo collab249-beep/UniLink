@@ -3,8 +3,10 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 
 import { ActivityType } from "@/constants/activities";
 import { scheduleFreeExpiryAlert } from "@/hooks/useNotifications";
+import { api, getToken } from "@/lib/api";
 
-const STORAGE_KEY = "unilink:free";
+// AsyncStorage key used only as a fast client-side restore cache
+const CACHE_KEY = "unilink:free";
 const FREE_DURATION_MS = 60 * 60 * 1000;
 
 export interface LiveStats {
@@ -27,54 +29,61 @@ interface LiveActivityContextType {
 
 const LiveActivityContext = createContext<LiveActivityContextType | null>(null);
 
-function generateStats(seed: number): LiveStats {
-  const r = (base: number, range: number) => base + Math.floor((((seed * 9301 + 49297) % 233280) / 233280) * range);
-  const r2 = (base: number, range: number) => base + Math.floor((((seed * 2153 + 31489) % 193200) / 193200) * range);
-  const r3 = (base: number, range: number) => base + Math.floor((((seed * 7177 + 17117) % 172320) / 172320) * range);
-  return {
-    totalActive: r(38, 22),
-    uonActive: r2(20, 14),
-    ntuActive: r3(14, 12),
-    byActivity: {
-      study: r(10, 8),
-      coffee: r2(5, 6),
-      lunch: r3(4, 5),
-      football: r(3, 4),
-      gym: r2(3, 4),
-      gaming: r3(2, 3),
-      night_out: r(4, 6),
-      society: r2(3, 5),
-    },
-  };
-}
+const DEFAULT_STATS: LiveStats = {
+  totalActive: 0,
+  uonActive: 0,
+  ntuActive: 0,
+  byActivity: {},
+};
 
 export function LiveActivityProvider({ children }: { children: React.ReactNode }) {
   const [isFree, setIsFreeState] = useState(false);
   const [freeUntil, setFreeUntil] = useState<number | null>(null);
   const [freeTimeRemaining, setFreeTimeRemaining] = useState(0);
   const [selectedCampus, setSelectedCampus] = useState<string | null>(null);
-  const [statSeed, setStatSeed] = useState(() => Date.now() % 1000);
+  const [stats, setStats] = useState<LiveStats>(DEFAULT_STATS);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statsRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const freeRef = useRef<boolean>(false);
+
+  async function fetchStats(campusId?: string) {
+    try {
+      const { stats: s } = await api.live.getStats(campusId);
+      setStats({
+        ...s,
+        byActivity: s.byActivity as Partial<Record<ActivityType, number>>,
+        // Add 1 for the current user if they are free (server counts all users)
+        totalActive: freeRef.current ? s.totalActive : s.totalActive,
+      });
+    } catch {}
+  }
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+    // Restore from cache first for instant UI
+    AsyncStorage.getItem(CACHE_KEY).then(async (raw) => {
       if (raw) {
-        const data = JSON.parse(raw) as { freeUntil: number; campusId: string };
-        if (Date.now() < data.freeUntil) {
-          setIsFreeState(true);
-          setFreeUntil(data.freeUntil);
-          setSelectedCampus(data.campusId);
-          startFreeTimer(data.freeUntil);
-        } else {
-          AsyncStorage.removeItem(STORAGE_KEY);
-        }
+        try {
+          const data = JSON.parse(raw) as { freeUntil: number; campusId: string };
+          if (Date.now() < data.freeUntil) {
+            setIsFreeState(true);
+            freeRef.current = true;
+            setFreeUntil(data.freeUntil);
+            setSelectedCampus(data.campusId);
+            startFreeTimer(data.freeUntil);
+          } else {
+            AsyncStorage.removeItem(CACHE_KEY);
+          }
+        } catch {}
       }
     });
 
-    statsRef.current = setInterval(() => {
-      setStatSeed(Date.now() % 1000);
-    }, 30000);
+    // Fetch live stats immediately (only if logged in)
+    getToken().then((token) => {
+      if (token) fetchStats();
+    });
+
+    // Poll stats every 30s
+    statsRef.current = setInterval(() => fetchStats(), 30_000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -90,8 +99,10 @@ export function LiveActivityProvider({ children }: { children: React.ReactNode }
       if (remaining === 0) {
         if (timerRef.current) clearInterval(timerRef.current);
         setIsFreeState(false);
+        freeRef.current = false;
         setFreeUntil(null);
-        AsyncStorage.removeItem(STORAGE_KEY);
+        AsyncStorage.removeItem(CACHE_KEY);
+        api.live.setNotFree().catch(() => {});
       }
     };
     update();
@@ -100,29 +111,34 @@ export function LiveActivityProvider({ children }: { children: React.ReactNode }
 
   async function setFree(campusId: string) {
     const until = Date.now() + FREE_DURATION_MS;
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ freeUntil: until, campusId }));
+    // Update cache immediately for responsive UI
+    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ freeUntil: until, campusId }));
     setIsFreeState(true);
+    freeRef.current = true;
     setFreeUntil(until);
     setSelectedCampus(campusId);
     startFreeTimer(until);
     scheduleFreeExpiryAlert(FREE_DURATION_MS).catch(() => {});
+    // Sync to server
+    api.live.setFree(campusId).catch(() => {});
+    // Refresh stats
+    await fetchStats(campusId);
   }
 
   async function setNotFree() {
     if (timerRef.current) clearInterval(timerRef.current);
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    await AsyncStorage.removeItem(CACHE_KEY);
     setIsFreeState(false);
+    freeRef.current = false;
     setFreeUntil(null);
     setFreeTimeRemaining(0);
+    api.live.setNotFree().catch(() => {});
+    await fetchStats();
   }
 
   function setCampus(campusId: string) {
     setSelectedCampus(campusId);
-  }
-
-  const stats = generateStats(statSeed);
-  if (isFree) {
-    stats.totalActive += 1;
+    fetchStats(campusId);
   }
 
   return (
