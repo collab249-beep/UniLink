@@ -177,7 +177,9 @@ overrides:
   # Security: fix vulnerable tar (critical/high DoS via PAX/decompression issues)
   "tar@7": ">=7.5.21"
   # Security: fix vulnerable undici (HTTP header injection, WebSocket DoS, CRLF injection)
-  "undici@6": ">=6.28.0"
+  # Keep Expo CLI on Node 20-compatible undici 6.x. A bare >= range
+  # permits undici 8, which requires Node 22 and stops Expo Launch exports.
+  "undici@6": ">=6.28.0 <7"
   # Security: fix vulnerable linkify-it (quadratic-complexity DoS)
   linkify-it: ">=5.0.2"
   # Security: fix vulnerable markdown-it (quadratic-complexity DoS in smartquotes)
