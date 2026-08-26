@@ -19,3 +19,45 @@ uri = "file://.local/outputs/UniLink.pdf"
 type = "pdf"
 title = "UniLink (PDF)"
 description = "PDF export of the 6-slide UniLink deck."
+
+[[outputs]]
+id = "xnAj9TUyr5_xes11oYX8N"
+uri = "file://screenshots/unilink-01-sign-in.jpg"
+type = "image"
+title = "UniLink — Sign In"
+description = "iPhone-style screenshot of the UniLink sign-in screen."
+
+[[outputs]]
+id = "TLbl8joy2dqjXXmMI_nkW"
+uri = "file://screenshots/unilink-02-register.jpg"
+type = "image"
+title = "UniLink — Create Account"
+description = "iPhone-style screenshot of the UniLink registration screen."
+
+[[outputs]]
+id = "2CR2eJP6_ndHLMZu_vy_f"
+uri = "file://screenshots/unilink-03-profile-setup.jpg"
+type = "image"
+title = "UniLink — Profile Setup"
+description = "iPhone-style screenshot of the profile photo setup screen."
+
+[[outputs]]
+id = "uIOFa_DrfzF903KxyV0Z_"
+uri = "file://screenshots/unilink-04-university-verify.jpg"
+type = "image"
+title = "UniLink — University Verification"
+description = "iPhone-style screenshot of the university verification screen."
+
+[[outputs]]
+id = "noRJnAfPDvWaXCujPSLgD"
+uri = "file://screenshots/unilink-05-events.jpg"
+type = "image"
+title = "UniLink — Campus Events"
+description = "iPhone-style screenshot of the campus events screen."
+
+[[outputs]]
+id = "F2Z8CuaaAtWX4-htVIh3O"
+uri = "file://screenshots/unilink-06-profile.jpg"
+type = "image"
+title = "UniLink — Profile"
+description = "iPhone-style screenshot of the UniLink profile screen."
