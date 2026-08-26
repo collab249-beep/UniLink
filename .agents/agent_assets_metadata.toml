@@ -61,3 +61,45 @@ uri = "file://screenshots/unilink-06-profile.jpg"
 type = "image"
 title = "UniLink — Profile"
 description = "iPhone-style screenshot of the UniLink profile screen."
+
+[[outputs]]
+id = "jle0Hkq_hfy3dhydIEXHJ"
+uri = "file://screenshots/unilink-feature-01-campus-events.jpg"
+type = "image"
+title = "UniLink Feature — Campus Events"
+description = "Browse food fairs, sports, study sessions, and other campus events. Filter by category, see who is going, and tap Attend to join."
+
+[[outputs]]
+id = "pSVQulfii5gMLF8sCCGDK"
+uri = "file://screenshots/unilink-feature-02-notification-alerts.jpg"
+type = "image"
+title = "UniLink Feature — Notifications"
+description = "Control alerts for new activity groups, campus events, free-status expiry, and nearby students. Recent updates appear in one place."
+
+[[outputs]]
+id = "CBv4JJyoss7LOWVN7xx3h"
+uri = "file://screenshots/unilink-feature-03-meetup-history.jpg"
+type = "image"
+title = "UniLink Feature — Meetup History"
+description = "Keep a record of completed meetups. The empty state guides students to find their first group when they have not met anyone yet."
+
+[[outputs]]
+id = "P5ib-bRGWCxgdffBOVbLK"
+uri = "file://screenshots/unilink-feature-04-premium.jpg"
+type = "image"
+title = "UniLink Feature — Premium Plans"
+description = "Compare monthly, term, and annual plans, then unlock benefits such as unlimited matching and profile boosts."
+
+[[outputs]]
+id = "5m19gqvzq2gHXzy3ghcRp"
+uri = "file://screenshots/unilink-feature-05-referrals.jpg"
+type = "image"
+title = "UniLink Feature — Invite Friends"
+description = "Share a referral code with friends, track your referral rank, and unlock rewards as more students join UniLink."
+
+[[outputs]]
+id = "DiOD0xHbu0l0LdyL31Sj7"
+uri = "file://screenshots/unilink-feature-06-edit-profile.jpg"
+type = "image"
+title = "UniLink Feature — Edit Profile"
+description = "Add a photo, name, course, bio, and year of study so other students know who they might meet."
