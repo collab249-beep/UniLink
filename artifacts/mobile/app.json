@@ -15,7 +15,12 @@
     },
     "ios": {
       "supportsTablet": false,
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "UniLink uses your location to help you discover nearby students and meetups happening around you.",
+        "NSCameraUsageDescription": "UniLink uses your camera so you can take a profile photo or share photos when using supported features.",
+        "NSPhotoLibraryUsageDescription": "UniLink uses your photo library so you can choose a profile picture or upload photos when using supported features."
+      }
     },
     "android": {},
     "web": {
@@ -30,7 +35,20 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "UniLink uses your location to help you discover nearby students and meetups happening around you."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "UniLink uses your camera so you can take a profile photo or share photos when using supported features.",
+          "photosPermission": "UniLink uses your photo library so you can choose a profile picture or upload photos when using supported features."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -4,6 +4,7 @@ import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Platform,
   StyleSheet,
   Text,
@@ -52,6 +53,9 @@ export default function MatchingScreen() {
   const { createSession } = useSession();
   const [phase, setPhase] = useState<"searching" | "found" | "creating">("searching");
   const [peopleCount, setPeopleCount] = useState(0);
+  const [locationDecisionMade, setLocationDecisionMade] = useState(
+    Platform.OS === "web",
+  );
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
@@ -68,9 +72,7 @@ export default function MatchingScreen() {
       -1,
       false,
     );
-    if (Platform.OS !== "web") {
-      Location.requestForegroundPermissionsAsync().catch(() => {});
-    }
+    if (!locationDecisionMade) return;
     const countInterval = setInterval(() => {
       setPeopleCount((p) => Math.min(p + 1, 4));
     }, 900);
@@ -95,7 +97,15 @@ export default function MatchingScreen() {
       if (timerRef.current) clearTimeout(timerRef.current);
       clearInterval(countInterval);
     };
-  }, [activity, campus, checkScale, createSession, iconScale, user]);
+  }, [
+    activity,
+    campus,
+    checkScale,
+    createSession,
+    iconScale,
+    locationDecisionMade,
+    user,
+  ]);
 
   const iconAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: iconScale.value }] }));
   const checkAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }], opacity: checkScale.value }));
@@ -105,6 +115,23 @@ export default function MatchingScreen() {
     router.back();
   }
 
+  async function handleEnableLocation() {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status === "granted") {
+      try {
+        await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      } catch {
+        Alert.alert(
+          "Location unavailable",
+          "We couldn’t determine your location. You can still search using your selected campus.",
+        );
+      }
+    }
+    setLocationDecisionMade(true);
+  }
+
   if (!activityConfig) { router.back(); return null; }
 
   const radarColor = activityConfig.gradientStart;
@@ -112,7 +139,19 @@ export default function MatchingScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: topPad }]}>
       <View style={styles.content}>
-        {phase === "searching" ? (
+        {!locationDecisionMade ? (
+          <View style={styles.permissionSection}>
+            <View style={[styles.permissionIcon, { backgroundColor: colors.secondary }]}>
+              <Ionicons name="location" size={34} color={colors.primary} />
+            </View>
+            <Text style={[styles.headline, { color: colors.foreground }]}>
+              Find students near you
+            </Text>
+            <Text style={[styles.permissionCopy, { color: colors.mutedForeground }]}>
+              Allow location access to help UniLink discover nearby students and meetups. Your selected campus is used if you continue without it.
+            </Text>
+          </View>
+        ) : phase === "searching" ? (
           <>
             {campusConfig && (
               <View style={[styles.campusTag, { backgroundColor: colors.secondary }]}>
@@ -167,7 +206,24 @@ export default function MatchingScreen() {
         )}
       </View>
 
-      {phase === "searching" && (
+      {!locationDecisionMade ? (
+        <View style={[styles.footer, { paddingBottom: bottomPad + 16 }]}>
+          <TouchableOpacity
+            style={[styles.locationBtn, { backgroundColor: colors.primary }]}
+            onPress={handleEnableLocation}
+          >
+            <Text style={styles.locationBtnText}>Use My Location</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.campusOnlyBtn}
+            onPress={() => setLocationDecisionMade(true)}
+          >
+            <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>
+              Continue with campus only
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : phase === "searching" && (
         <View style={[styles.footer, { paddingBottom: bottomPad + 16 }]}>
           <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: colors.muted }]} onPress={handleCancel}>
             <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>
@@ -205,6 +261,21 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   textSection: { alignItems: "center", gap: 6 },
+  permissionSection: { alignItems: "center", gap: 14, maxWidth: 340 },
+  permissionIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  permissionCopy: {
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+    fontFamily: "Inter_400Regular",
+  },
   headline: { fontSize: 26, fontFamily: "Inter_700Bold", letterSpacing: -0.3, textAlign: "center" },
   activityLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
   countRow: { flexDirection: "row", alignItems: "center", gap: 6, height: 22 },
@@ -223,7 +294,10 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   subtext: { fontSize: 15, fontFamily: "Inter_400Regular" },
-  footer: { paddingHorizontal: 24 },
+  footer: { paddingHorizontal: 24, gap: 8 },
+  locationBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center" },
+  locationBtnText: { color: "#FFFFFF", fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  campusOnlyBtn: { paddingVertical: 12, alignItems: "center" },
   cancelBtn: { paddingVertical: 16, borderRadius: 14, alignItems: "center" },
   cancelText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
 });

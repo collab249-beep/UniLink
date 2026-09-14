@@ -1,0 +1,1 @@
+- [Expo Web public-page animations](expo-web-public-page-animations.md) — keep legal/support routes free of wrapper-based Reanimated style composition.
