@@ -306,12 +306,15 @@ export default function ProfileScreen() {
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.infoRow, { borderBottomColor: colors.border }]}
+            onPress={() => router.push("/terms")}
+          >
             <Ionicons name="document-text-outline" size={20} color={colors.mutedForeground} />
             <Text style={[styles.menuLabel, { color: colors.foreground }]}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.infoRow}>
+          <TouchableOpacity style={styles.infoRow} onPress={() => router.push("/privacy")}>
             <Ionicons name="lock-closed-outline" size={20} color={colors.mutedForeground} />
             <Text style={[styles.menuLabel, { color: colors.foreground }]}>Privacy Policy</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />

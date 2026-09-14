@@ -2,8 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -30,14 +31,18 @@ export default function MeetupScreen() {
   const { session, timeRemaining, confirmAttendance, leaveSession } = useSession();
   const { unreadCount } = useChat();
   const [safetyVisible, setSafetyVisible] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [leavingExpired, setLeavingExpired] = useState(false);
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? Math.max(insets.bottom, 34) : insets.bottom;
 
-  if (!session) {
-    router.replace("/(tabs)");
-    return null;
-  }
+  useEffect(() => {
+    if (!session) router.replace("/(tabs)");
+  }, [session]);
+
+  if (!session) return null;
 
   const activityConfig = ACTIVITIES.find((a) => a.id === session.activity);
   const otherParticipants = session.participants.filter((p) => p.id !== user?.id);
@@ -76,23 +81,56 @@ export default function MeetupScreen() {
   }
 
   async function handleConfirm() {
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await confirmAttendance();
+    if (confirming) return;
+    setConfirming(true);
+    try {
+      await confirmAttendance();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      Alert.alert("Couldn’t confirm attendance", "Please check your connection and try again.");
+    } finally {
+      setConfirming(false);
+    }
   }
 
   async function handleLeave() {
-    await leaveSession();
-    router.replace("/(tabs)");
+    if (leaving) return;
+    setLeaving(true);
+    try {
+      await leaveSession();
+      router.replace("/(tabs)");
+    } finally {
+      setLeaving(false);
+    }
   }
 
-  async function handleReport(category: string, reason: string) {
-    if (firstOther) await reportUser(firstOther.id, category, reason);
+  async function handleReport(userId: string, category: string, reason: string) {
+    await reportUser(userId, category, reason);
   }
 
-  async function handleBlock() {
-    if (firstOther) await blockUser(firstOther.id);
-    await leaveSession();
-    router.replace("/(tabs)");
+  async function handleBlock(userId: string) {
+    await blockUser(userId);
+    try {
+      await leaveSession();
+      router.replace("/(tabs)");
+    } catch {
+      Alert.alert(
+        "User blocked",
+        "The user was blocked, but UniLink couldn’t leave the meetup. Please use Leave Meetup and try again.",
+      );
+    }
+  }
+
+  async function handleExpiredExit() {
+    if (leavingExpired) return;
+    setLeavingExpired(true);
+    try {
+      await leaveSession();
+      router.replace("/(tabs)");
+    } catch {
+      Alert.alert("Couldn’t close meetup", "Please check your connection and try again.");
+      setLeavingExpired(false);
+    }
   }
 
   const isExpired = timeRemaining === 0;
@@ -173,11 +211,14 @@ export default function MeetupScreen() {
 
         {!session.attendanceConfirmed && !isExpired && (
           <TouchableOpacity
+            disabled={confirming}
             style={[styles.confirmBtn, { backgroundColor: colors.success }]}
             onPress={handleConfirm}
           >
             <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-            <Text style={styles.confirmBtnText}>Confirm Attendance</Text>
+            <Text style={styles.confirmBtnText}>
+              {confirming ? "Confirming…" : "Confirm Attendance"}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -192,10 +233,13 @@ export default function MeetupScreen() {
 
         {isExpired && (
           <TouchableOpacity
+            disabled={leavingExpired}
             style={[styles.confirmBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.replace("/(tabs)")}
+            onPress={handleExpiredExit}
           >
-            <Text style={styles.confirmBtnText}>Back to Home</Text>
+            <Text style={styles.confirmBtnText}>
+              {leavingExpired ? "Leaving…" : "Leave Meetup"}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -228,6 +272,7 @@ export default function MeetupScreen() {
       <SafetySheet
         visible={safetyVisible}
         onClose={() => setSafetyVisible(false)}
+        participants={otherParticipants}
         onReport={handleReport}
         onBlock={handleBlock}
         onLeave={handleLeave}

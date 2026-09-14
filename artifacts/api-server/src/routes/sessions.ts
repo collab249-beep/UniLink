@@ -43,6 +43,32 @@ function getLocation(campusId: string, activity: string): string {
   );
 }
 
+async function leaveSessionMembership(userId: string, sessionId: string) {
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(sessionParticipants)
+      .where(
+        and(
+          eq(sessionParticipants.sessionId, sessionId),
+          eq(sessionParticipants.userId, userId),
+        ),
+      );
+
+    const remaining = await tx
+      .select({ userId: sessionParticipants.userId })
+      .from(sessionParticipants)
+      .where(eq(sessionParticipants.sessionId, sessionId))
+      .limit(1);
+
+    if (remaining.length === 0) {
+      await tx
+        .update(meetupSessions)
+        .set({ endTime: new Date() })
+        .where(eq(meetupSessions.id, sessionId));
+    }
+  });
+}
+
 async function getBlockedUserIds(userId: string) {
   const rows = await db
     .select({
@@ -136,16 +162,48 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    // End any existing session for this user first
+    // Leave any existing session for this user without ending it for others.
     const existing = await getActiveSession(req.user!.id);
     if (existing) {
-      await db
-        .update(meetupSessions)
-        .set({ endTime: new Date() })
-        .where(eq(meetupSessions.id, existing.id));
+      await leaveSessionMembership(req.user!.id, existing.id);
     }
 
     const now = new Date();
+    const blockedUserIds = new Set(await getBlockedUserIds(req.user!.id));
+    const candidates = await db
+      .select({ id: meetupSessions.id })
+      .from(meetupSessions)
+      .where(
+        and(
+          eq(meetupSessions.activity, activity),
+          eq(meetupSessions.campus, campusId),
+          isNull(meetupSessions.endTime),
+          gt(meetupSessions.expiresAt, now),
+        ),
+      )
+      .limit(20);
+
+    for (const candidate of candidates) {
+      const members = await db
+        .select({ userId: sessionParticipants.userId })
+        .from(sessionParticipants)
+        .where(eq(sessionParticipants.sessionId, candidate.id));
+
+      if (
+        members.length > 0 &&
+        members.length < 4 &&
+        !members.some(({ userId }) => blockedUserIds.has(userId))
+      ) {
+        await db.insert(sessionParticipants).values({
+          sessionId: candidate.id,
+          userId: req.user!.id,
+        });
+        const matched = await getActiveSession(req.user!.id);
+        res.status(201).json({ session: matched });
+        return;
+      }
+    }
+
     const sessionId = crypto.randomUUID();
     const location = getLocation(campusId, activity);
 
@@ -183,10 +241,7 @@ router.delete("/active", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    await db
-      .update(meetupSessions)
-      .set({ endTime: new Date() })
-      .where(eq(meetupSessions.id, session.id));
+    await leaveSessionMembership(req.user!.id, session.id);
 
     res.json({ success: true });
   } catch {

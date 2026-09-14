@@ -252,6 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function blockUser(userId: string) {
+    await api.auth.block(userId);
     const social = await loadSocial();
     const updated: SocialData = {
       ...social,
@@ -259,7 +260,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     await saveSocial(updated);
     setUser((u) => u ? { ...u, blockedUsers: updated.blockedUsers } : u);
-    await api.auth.block(userId);
   }
 
   async function reportUser(userId: string, category: string, reason: string) {

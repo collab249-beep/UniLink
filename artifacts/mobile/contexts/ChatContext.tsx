@@ -15,13 +15,13 @@ export interface ChatMessage {
   text: string;
   fromSelf: boolean;
   timestamp: number;
-  status: "sending" | "sent" | "delivered";
+  status: "sending" | "sent" | "delivered" | "failed";
 }
 
 interface ChatContextType {
   messages: ChatMessage[];
   isTyping: boolean;
-  sendMessage: (text: string) => void;
+  sendMessage: (text: string) => Promise<void>;
   clearChat: () => void;
   unreadCount: number;
   markRead: () => void;
@@ -30,7 +30,7 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType>({
   messages: [],
   isTyping: false,
-  sendMessage: () => {},
+  sendMessage: async () => {},
   clearChat: () => {},
   unreadCount: 0,
   markRead: () => {},
@@ -130,7 +130,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     };
   }, [sessionId]);
 
-  const sendMessage = useCallback((text: string) => {
+  const sendMessage = useCallback(async (text: string) => {
     const tempId = `${Date.now()}-self-temp`;
     const newMsg: ChatMessage = {
       id: tempId,
@@ -144,26 +144,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     // Persist to server if in a session
     if (sessionId) {
-      api.chat.sendMessage(sessionId, text)
-        .then(({ message }) => {
-          if (!isMountedRef.current) return;
+      try {
+        const { message } = await api.chat.sendMessage(sessionId, text);
+        if (!isMountedRef.current) return;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? { id: message.id, text: message.text, fromSelf: true, timestamp: message.timestamp, status: "delivered" as const }
+              : m,
+          ),
+        );
+        lastMsgCount.current += 1;
+      } catch (error) {
+        if (isMountedRef.current) {
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId
-                ? { id: message.id, text: message.text, fromSelf: true, timestamp: message.timestamp, status: "delivered" as const }
-                : m,
-            ),
+            prev.map((m) => m.id === tempId ? { ...m, status: "failed" as const } : m),
           );
-          lastMsgCount.current += 1;
-        })
-        .catch(() => {
-          // Mark as delivered anyway for offline feel
-          if (isMountedRef.current) {
-            setMessages((prev) =>
-              prev.map((m) => m.id === tempId ? { ...m, status: "delivered" as const } : m),
-            );
-          }
-        });
+        }
+        throw error;
+      }
     } else {
       // No session: mark delivered locally
       setTimeout(() => {

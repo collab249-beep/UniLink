@@ -114,6 +114,29 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
+  useEffect(() => {
+    if (!session) return;
+    const sessionId = session.id;
+    const refresh = async () => {
+      try {
+        const { session: active } = await api.sessions.getActive();
+        if (!active) {
+          setSession(null);
+          setTimeRemaining(0);
+          if (timerRef.current) clearInterval(timerRef.current);
+          return;
+        }
+        if (active.id === sessionId) {
+          setSession(apiSessionToMeetup(active));
+        }
+      } catch {
+        // Keep the last known session during temporary connectivity loss.
+      }
+    };
+    const refreshTimer = setInterval(refresh, 5000);
+    return () => clearInterval(refreshTimer);
+  }, [session?.id]);
+
   function startTimer(s: MeetupSession) {
     if (timerRef.current) clearInterval(timerRef.current);
     const update = () => {
@@ -142,28 +165,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   async function confirmAttendance() {
     const { session: s } = await api.sessions.confirmAttendance();
-    if (s) setSession(apiSessionToMeetup(s));
+    if (!s) throw new Error("Attendance confirmation did not return a session");
+    setSession(apiSessionToMeetup(s));
   }
 
   async function leaveSession() {
+    await api.sessions.leave();
     if (timerRef.current) clearInterval(timerRef.current);
-    if (session) {
-      // Optimistically add to history
-      const item: MeetupHistoryItem = {
-        id: session.id,
-        activity: session.activity,
-        participants: session.participants,
-        location: session.location,
-        campus: session.campus,
-        startTime: session.startTime,
-        endTime: Date.now(),
-        attendanceConfirmed: session.attendanceConfirmed,
-      };
-      setHistory((prev) => [item, ...prev].slice(0, 50));
-    }
-    await api.sessions.leave().catch(() => {});
     setSession(null);
     setTimeRemaining(0);
+    try {
+      const { history: latestHistory } = await api.sessions.getHistory();
+      setHistory(latestHistory.map(apiHistoryToItem));
+    } catch {
+      // Leaving succeeded; a history refresh can safely wait until next launch.
+    }
   }
 
   return (

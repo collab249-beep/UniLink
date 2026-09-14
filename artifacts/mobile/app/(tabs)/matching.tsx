@@ -50,13 +50,16 @@ export default function MatchingScreen() {
   const insets = useSafeAreaInsets();
   const { activity, campus } = useLocalSearchParams<{ activity: ActivityType; campus: string }>();
   const { user } = useAuth();
-  const { createSession } = useSession();
+  const { createSession, leaveSession } = useSession();
   const [phase, setPhase] = useState<"searching" | "found" | "creating">("searching");
   const [peopleCount, setPeopleCount] = useState(0);
   const [locationDecisionMade, setLocationDecisionMade] = useState(
     Platform.OS === "web",
   );
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelledRef = useRef(false);
+  const createSessionRef = useRef(createSession);
+  const leaveSessionRef = useRef(leaveSession);
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? Math.max(insets.bottom, 34) : insets.bottom;
@@ -67,6 +70,12 @@ export default function MatchingScreen() {
   const checkScale = useSharedValue(0);
 
   useEffect(() => {
+    createSessionRef.current = createSession;
+    leaveSessionRef.current = leaveSession;
+  }, [createSession, leaveSession]);
+
+  useEffect(() => {
+    cancelledRef.current = false;
     iconScale.value = withRepeat(
       withSequence(withTiming(1.08, { duration: 900 }), withTiming(1, { duration: 900 })),
       -1,
@@ -83,17 +92,32 @@ export default function MatchingScreen() {
       checkScale.value = withSpring(1, { damping: 12, stiffness: 200 });
       timerRef.current = setTimeout(async () => {
         setPhase("creating");
-        await createSession(
-          activity ?? "study",
-          campus ?? "uon-university-park",
-          user?.id ?? "me",
-          user?.firstName ?? "You",
-          user?.university ?? "University of Nottingham",
-        );
-        router.replace("/(tabs)/meetup");
+        try {
+          await createSessionRef.current(
+            activity ?? "study",
+            campus ?? "uon-university-park",
+            user?.id ?? "me",
+            user?.firstName ?? "You",
+            user?.university ?? "University of Nottingham",
+          );
+          if (cancelledRef.current) {
+            await leaveSessionRef.current();
+            return;
+          }
+          router.replace("/(tabs)/meetup");
+        } catch {
+          if (!cancelledRef.current) {
+            setPhase("searching");
+            Alert.alert(
+              "Couldn’t start meetup",
+              "Please check your connection and try again.",
+            );
+          }
+        }
       }, 1600);
-    }, 4200);
+    }, 8000);
     return () => {
+      cancelledRef.current = true;
       if (timerRef.current) clearTimeout(timerRef.current);
       clearInterval(countInterval);
     };
@@ -101,7 +125,6 @@ export default function MatchingScreen() {
     activity,
     campus,
     checkScale,
-    createSession,
     iconScale,
     locationDecisionMade,
     user,
@@ -111,6 +134,7 @@ export default function MatchingScreen() {
   const checkAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }], opacity: checkScale.value }));
 
   function handleCancel() {
+    cancelledRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
     router.back();
   }
@@ -223,7 +247,7 @@ export default function MatchingScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      ) : phase === "searching" && (
+      ) : (
         <View style={[styles.footer, { paddingBottom: bottomPad + 16 }]}>
           <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: colors.muted }]} onPress={handleCancel}>
             <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>

@@ -10,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Linking,
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
@@ -17,39 +18,67 @@ import { useColors } from "@/hooks/useColors";
 interface SafetySheetProps {
   visible: boolean;
   onClose: () => void;
-  onReport: (category: string, reason: string) => Promise<void>;
-  onBlock: () => void;
-  onLeave: () => void;
+  participants: Array<{ id: string; firstName: string }>;
+  onReport: (userId: string, category: string, reason: string) => Promise<void>;
+  onBlock: (userId: string) => Promise<void>;
+  onLeave: () => Promise<void>;
 }
 
-export function SafetySheet({ visible, onClose, onReport, onBlock, onLeave }: SafetySheetProps) {
+export function SafetySheet({ visible, onClose, participants, onReport, onBlock, onLeave }: SafetySheetProps) {
   const colors = useColors();
   const [showReportForm, setShowReportForm] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
   const [category, setCategory] = useState("harassment");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [confirmation, setConfirmation] = useState<"block" | "leave" | null>(null);
+  const [targetUserId, setTargetUserId] = useState(participants[0]?.id ?? "");
+  const selectedParticipant =
+    participants.find((participant) => participant.id === targetUserId) ??
+    participants[0];
 
   function handleEmergency() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     Alert.alert(
       "Emergency Help",
-      "In a real emergency, call 999 (UK) or 911 (US) immediately. Your campus security number: 0800 123 456",
-      [{ text: "Call Campus Security", style: "destructive" }, { text: "OK" }],
+      "If you or someone else is in immediate danger, call emergency services now.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Call 999",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const supported = await Linking.canOpenURL("tel:999");
+              if (!supported) throw new Error("Phone calls are unavailable");
+              await Linking.openURL("tel:999");
+            } catch {
+              Alert.alert(
+                "Unable to start call",
+                "Please dial 999 directly from your phone.",
+              );
+            }
+          },
+        },
+      ],
     );
   }
 
   async function handleReport() {
+    if (!selectedParticipant) {
+      Alert.alert("No user selected", "Choose a group member to report.");
+      return;
+    }
     if (!reason.trim()) {
       Alert.alert("Add details", "Please explain what happened.");
       return;
     }
     setSubmitting(true);
     try {
-      await onReport(category, reason.trim());
+      await onReport(selectedParticipant.id, category, reason.trim());
       setReason("");
       setShowReportForm(false);
-      onClose();
-      Alert.alert("Report submitted", "UniLink moderation will review your report.");
+      setReportSubmitted(true);
     } catch {
       Alert.alert("Report failed", "Please try again.");
     } finally {
@@ -58,25 +87,39 @@ export function SafetySheet({ visible, onClose, onReport, onBlock, onLeave }: Sa
   }
 
   function handleBlock() {
-    Alert.alert("Block User", "This user will be removed from your matches.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Block",
-        style: "destructive",
-        onPress: () => { onBlock(); onClose(); },
-      },
-    ]);
+    if (!selectedParticipant) {
+      Alert.alert("No user selected", "Choose a group member to block.");
+      return;
+    }
+    setConfirmation("block");
   }
 
   function handleLeave() {
-    Alert.alert("Leave Meetup", "Are you sure you want to leave this meetup?", [
-      { text: "Stay", style: "cancel" },
-      {
-        text: "Leave",
-        style: "destructive",
-        onPress: () => { onLeave(); onClose(); },
-      },
-    ]);
+    setConfirmation("leave");
+  }
+
+  async function handleConfirmedAction() {
+    if (!confirmation || submitting) return;
+    setSubmitting(true);
+    try {
+      if (confirmation === "block") {
+        if (!selectedParticipant) return;
+        await onBlock(selectedParticipant.id);
+      } else {
+        await onLeave();
+      }
+      setConfirmation(null);
+      onClose();
+    } catch {
+      Alert.alert(
+        confirmation === "block" ? "Block failed" : "Couldn’t leave meetup",
+        confirmation === "block"
+          ? "The user was not blocked. Please try again."
+          : "Please check your connection and try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -86,8 +129,113 @@ export function SafetySheet({ visible, onClose, onReport, onBlock, onLeave }: Sa
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           <Text style={[styles.title, { color: colors.foreground }]}>Safety</Text>
 
-          {showReportForm ? (
+          {reportSubmitted ? (
             <View style={styles.reportForm}>
+              <View
+                style={[styles.confirmIcon, { backgroundColor: colors.success + "18" }]}
+              >
+                <Ionicons name="checkmark" size={30} color={colors.success} />
+              </View>
+              <Text style={[styles.confirmTitle, { color: colors.foreground }]}>
+                Report submitted
+              </Text>
+              <Text style={[styles.confirmBody, { color: colors.mutedForeground }]}>
+                UniLink moderation will review your report. Thank you for helping keep the community safe.
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setReportSubmitted(false);
+                  onClose();
+                }}
+                style={[styles.submitReport, { backgroundColor: colors.primary }]}
+              >
+                <Text style={styles.submitReportText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          ) : confirmation ? (
+            <View style={styles.reportForm}>
+              <View
+                style={[
+                  styles.confirmIcon,
+                  { backgroundColor: colors.destructive + "18" },
+                ]}
+              >
+                <Ionicons
+                  name={confirmation === "block" ? "ban" : "log-out-outline"}
+                  size={28}
+                  color={colors.destructive}
+                />
+              </View>
+              <Text style={[styles.confirmTitle, { color: colors.foreground }]}>
+                {confirmation === "block" ? "Block User?" : "Leave Meetup?"}
+              </Text>
+              <Text style={[styles.confirmBody, { color: colors.mutedForeground }]}>
+                {confirmation === "block"
+                  ? `${selectedParticipant?.firstName ?? "This user"} will be removed from your matches and won’t be able to message you.`
+                  : "You will leave this group. The meetup will continue for the other participants."}
+              </Text>
+              <TouchableOpacity
+                disabled={submitting}
+                onPress={handleConfirmedAction}
+                style={[styles.submitReport, { backgroundColor: colors.destructive }]}
+              >
+                <Text style={styles.submitReportText}>
+                  {submitting
+                    ? "Please wait…"
+                    : confirmation === "block"
+                      ? "Block User"
+                      : "Leave Meetup"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                disabled={submitting}
+                onPress={() => setConfirmation(null)}
+                style={styles.formCancel}
+              >
+                <Text style={{ color: colors.mutedForeground }}>
+                  {confirmation === "leave" ? "Stay" : "Cancel"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : showReportForm ? (
+            <View style={styles.reportForm}>
+              {participants.length > 1 && (
+                <>
+                  <Text style={[styles.formLabel, { color: colors.foreground }]}>
+                    Who are you reporting?
+                  </Text>
+                  <View style={styles.categoryRow}>
+                    {participants.map((participant) => (
+                      <TouchableOpacity
+                        key={participant.id}
+                        disabled={submitting}
+                        onPress={() => setTargetUserId(participant.id)}
+                        style={[
+                          styles.categoryChip,
+                          {
+                            backgroundColor:
+                              selectedParticipant?.id === participant.id
+                                ? colors.primary
+                                : colors.muted,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={{
+                            color:
+                              selectedParticipant?.id === participant.id
+                                ? "#FFFFFF"
+                                : colors.foreground,
+                            fontSize: 12,
+                          }}
+                        >
+                          {participant.firstName}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
               <Text style={[styles.formLabel, { color: colors.foreground }]}>What happened?</Text>
               <View style={styles.categoryRow}>
                 {[
@@ -141,29 +289,36 @@ export function SafetySheet({ visible, onClose, onReport, onBlock, onLeave }: Sa
             </View>
           ) : (
             <>
-          <TouchableOpacity
-            style={[styles.row, { borderBottomColor: colors.border }]}
-            onPress={() => setShowReportForm(true)}
-          >
-            <View style={[styles.iconWrap, { backgroundColor: "#FF9F0A18" }]}>
-              <Ionicons name="flag" size={22} color="#FF9F0A" />
-            </View>
-            <Text style={[styles.rowLabel, { color: colors.foreground }]}>Report User</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-          </TouchableOpacity>
+          {selectedParticipant && (
+            <TouchableOpacity
+              disabled={submitting}
+              style={[styles.row, { borderBottomColor: colors.border }]}
+              onPress={() => setShowReportForm(true)}
+            >
+              <View style={[styles.iconWrap, { backgroundColor: "#FF9F0A18" }]}>
+                <Ionicons name="flag" size={22} color="#FF9F0A" />
+              </View>
+              <Text style={[styles.rowLabel, { color: colors.foreground }]}>Report User</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+
+          {selectedParticipant && (
+            <TouchableOpacity
+              disabled={submitting}
+              style={[styles.row, { borderBottomColor: colors.border }]}
+              onPress={handleBlock}
+            >
+              <View style={[styles.iconWrap, { backgroundColor: colors.destructive + "18" }]}>
+                <Ionicons name="ban" size={22} color={colors.destructive} />
+              </View>
+              <Text style={[styles.rowLabel, { color: colors.foreground }]}>Block User</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
-            style={[styles.row, { borderBottomColor: colors.border }]}
-            onPress={handleBlock}
-          >
-            <View style={[styles.iconWrap, { backgroundColor: colors.destructive + "18" }]}>
-              <Ionicons name="ban" size={22} color={colors.destructive} />
-            </View>
-            <Text style={[styles.rowLabel, { color: colors.foreground }]}>Block User</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
+            disabled={submitting}
             style={[styles.row, { borderBottomColor: colors.border }]}
             onPress={handleLeave}
           >
@@ -218,6 +373,26 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     marginBottom: 8,
     paddingHorizontal: 4,
+  },
+  confirmIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: 8,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+  },
+  confirmBody: {
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+    marginBottom: 8,
   },
   reportForm: { gap: 12 },
   formLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold" },

@@ -1,1 +1,2 @@
 - [Expo Web public-page animations](expo-web-public-page-animations.md) — keep legal/support routes free of wrapper-based Reanimated style composition.
+- [Expo Web confirmations](expo-web-confirmations.md) — use in-app confirmation UI for multi-action decisions instead of React Native alerts.

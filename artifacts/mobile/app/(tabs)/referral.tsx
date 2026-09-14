@@ -208,7 +208,15 @@ export default function ReferralScreen() {
             Refer 10+ students to become an official UniLink Campus Ambassador. Get exclusive perks,
             early access to new features, and help build the #1 student meetup app in Nottingham.
           </Text>
-          <TouchableOpacity style={[styles.ambassadorBtn, { backgroundColor: "#FFB300" }]}>
+          <TouchableOpacity
+            style={[styles.ambassadorBtn, { backgroundColor: "#FFB300" }]}
+            onPress={() =>
+              Alert.alert(
+                "Campus Ambassador Program",
+                "Students with 10 or more successful referrals can apply for the UniLink Campus Ambassador program. Contact hello@unilink.network to register your interest.",
+              )
+            }
+          >
             <Text style={styles.ambassadorBtnText}>Learn more</Text>
           </TouchableOpacity>
         </View>

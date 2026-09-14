@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -110,6 +111,12 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
           {msg.status === "sending" && (
             <Ionicons name="time-outline" size={12} color={colors.mutedForeground} />
           )}
+          {msg.status === "failed" && (
+            <>
+              <Ionicons name="alert-circle" size={13} color={colors.destructive} />
+              <Text style={[styles.timeText, { color: colors.destructive }]}>Not sent</Text>
+            </>
+          )}
           <Text style={[styles.timeText, { color: colors.mutedForeground }]}>{time}</Text>
         </View>
         <View style={[styles.selfBubble, { backgroundColor: colors.primary }]}>
@@ -171,7 +178,11 @@ export default function ChatScreen() {
     if (!msg) return;
     setDraft("");
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMessage(msg);
+    try {
+      await sendMessage(msg);
+    } catch {
+      Alert.alert("Message not sent", "Please check your connection and try again.");
+    }
   }
 
   const isExpired = timeRemaining === 0;
