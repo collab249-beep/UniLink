@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,7 +24,7 @@ import { useColors } from "@/hooks/useColors";
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { signInWithGoogle, signIn } = useAuth();
+  const { signInWithApple, signInWithGoogle, signIn } = useAuth();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,6 +37,26 @@ export default function LoginScreen() {
       router.replace("/(tabs)");
     } catch {
       Alert.alert("Error", "Sign in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleApple() {
+    setLoading(true);
+    try {
+      await signInWithApple();
+      router.replace("/(tabs)");
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? String(error.code)
+          : "";
+      if (code !== "ERR_REQUEST_CANCELED") {
+        const message =
+          error instanceof Error ? error.message : "Sign in failed. Please try again.";
+        Alert.alert("Apple Sign-In Error", message);
+      }
     } finally {
       setLoading(false);
     }
@@ -94,6 +115,17 @@ export default function LoginScreen() {
           <Ionicons name="logo-google" size={20} color="#EA4335" />
           <Text style={[styles.authBtnText, { color: colors.foreground }]}>Continue with Google</Text>
         </TouchableOpacity>
+
+        {Platform.OS === "ios" && (
+          <AppleAuthentication.AppleAuthenticationButton
+            testID="sign-in-with-apple"
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            cornerRadius={14}
+            style={styles.appleBtn}
+            onPress={handleApple}
+          />
+        )}
 
         <View style={styles.divider}>
           <View style={[styles.divLine, { backgroundColor: colors.border }]} />
@@ -168,6 +200,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
+  },
+  appleBtn: {
+    width: "100%",
+    height: 56,
+    marginTop: 12,
   },
   appName: {
     fontSize: 34,

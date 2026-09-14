@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { UniversityId } from "@/constants/universities";
 import { api, clearToken, getToken, setToken, type ApiUser } from "@/lib/api";
+import { signInToFirebaseWithApple } from "@/lib/appleAuth";
 
 const SOCIAL_KEY = "unilink:social"; // local-only: blocked/reported user IDs
 
@@ -37,6 +38,7 @@ interface SocialData {
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
+  signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (firstName: string, email: string, password: string) => Promise<UserProfile>;
@@ -128,6 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }
 
+  async function signInWithApple() {
+    const { idToken, firstName } = await signInToFirebaseWithApple();
+    const { token, user: apiUser } = await api.auth.firebaseSignIn(
+      idToken,
+      firstName,
+    );
+    await handleAuthResponse(token, apiUser);
+  }
+
   async function signIn(email: string, _password: string) {
     const { token, user: apiUser } = await api.auth.signIn(email);
     await handleAuthResponse(token, apiUser);
@@ -202,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, isLoading,
-      signInWithGoogle, signIn, signUp,
+      signInWithApple, signInWithGoogle, signIn, signUp,
       verifyUniversity, updateProfilePicture, updateProfile,
       signOut, blockUser, reportUser,
     }}>

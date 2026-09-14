@@ -129,6 +129,11 @@ export interface ApiNotificationPrefs {
 
 export const api = {
   auth: {
+    firebaseSignIn: (idToken: string, firstName?: string) =>
+      request<{ token: string; user: ApiUser }>("/auth/firebase", {
+        method: "POST",
+        body: JSON.stringify({ idToken, firstName }),
+      }),
     signIn: (email: string) =>
       request<{ token: string; user: ApiUser }>("/auth/signin", {
         method: "POST",
