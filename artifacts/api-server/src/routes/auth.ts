@@ -25,6 +25,7 @@ function sanitizeUser(user: typeof users.$inferSelect) {
 async function createAppSession(
   email: string,
   preferredFirstName?: string,
+  firebaseUid?: string,
 ) {
   const normalizedEmail = email.trim().toLowerCase();
   let [user] = await db
@@ -43,8 +44,19 @@ async function createAppSession(
         firstName,
         email: normalizedEmail,
         referralCode: makeReferralCode(firstName),
+        firebaseUid,
       })
       .returning();
+  } else if (firebaseUid && user.firebaseUid !== firebaseUid) {
+    [user] = await db
+      .update(users)
+      .set({ firebaseUid })
+      .where(eq(users.id, user.id))
+      .returning();
+  }
+
+  if (user.moderationStatus !== "active") {
+    throw new Error("ACCOUNT_REMOVED");
   }
 
   const tokenValue = crypto.randomUUID();
@@ -66,7 +78,8 @@ router.post("/signin", async (req, res) => {
       return;
     }
 
-    let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const normalizedEmail = email.trim().toLowerCase();
+    let [user] = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
     if (!user) {
       // Auto-create on first sign-in (demo flow — no password)
       const firstName = email.split("@")[0] ?? "Student";
@@ -76,10 +89,15 @@ router.post("/signin", async (req, res) => {
         .values({
           id: newId,
           firstName,
-          email,
+          email: normalizedEmail,
           referralCode: makeReferralCode(firstName),
         })
         .returning();
+    }
+
+    if (user.moderationStatus !== "active") {
+      res.status(403).json({ error: "This account has been removed by UniLink moderation" });
+      return;
     }
 
     const tokenValue = crypto.randomUUID();
@@ -120,7 +138,7 @@ router.post("/firebase", async (req, res) => {
       return;
     }
 
-    const session = await createAppSession(decoded.email, firstName);
+    const session = await createAppSession(decoded.email, firstName, decoded.uid);
     res.json({ token: session.token, user: sanitizeUser(session.user) });
   } catch (error) {
     const message =
@@ -135,12 +153,17 @@ router.post("/firebase", async (req, res) => {
 // POST /api/auth/signup  { firstName, email }
 router.post("/signup", async (req, res) => {
   try {
-    const { firstName, email } = req.body as {
+    const { firstName, email, acceptedCommunityGuidelines } = req.body as {
       firstName?: string;
       email?: string;
+      acceptedCommunityGuidelines?: boolean;
     };
     if (!firstName || !email) {
       res.status(400).json({ error: "firstName and email are required" });
+      return;
+    }
+    if (acceptedCommunityGuidelines !== true) {
+      res.status(400).json({ error: "Community Guidelines must be accepted" });
       return;
     }
 
@@ -161,6 +184,8 @@ router.post("/signup", async (req, res) => {
         firstName,
         email,
         referralCode: makeReferralCode(firstName),
+        communityGuidelinesVersion: "2026-09-14",
+        communityGuidelinesAcceptedAt: new Date(),
       })
       .returning();
 
@@ -175,6 +200,22 @@ router.post("/signup", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Sign-up failed" });
   }
+});
+
+router.post("/community-guidelines", requireAuth, async (req: AuthRequest, res) => {
+  if (req.body?.accepted !== true) {
+    res.status(400).json({ error: "Community Guidelines must be accepted" });
+    return;
+  }
+  const [user] = await db
+    .update(users)
+    .set({
+      communityGuidelinesVersion: "2026-09-14",
+      communityGuidelinesAcceptedAt: new Date(),
+    })
+    .where(eq(users.id, req.user!.id))
+    .returning();
+  res.json({ user: sanitizeUser(user) });
 });
 
 // POST /api/auth/signout
@@ -342,6 +383,19 @@ router.post("/block", requireAuth, async (req: AuthRequest, res) => {
       res.status(400).json({ error: "targetUserId is required" });
       return;
     }
+    if (targetUserId === req.user!.id) {
+      res.status(400).json({ error: "You cannot block yourself" });
+      return;
+    }
+    const [target] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, targetUserId), eq(users.moderationStatus, "active")))
+      .limit(1);
+    if (!target) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
     await db
       .insert(userBlocks)
       .values({ blockerId: req.user!.id, blockedId: targetUserId })
@@ -355,19 +409,34 @@ router.post("/block", requireAuth, async (req: AuthRequest, res) => {
 // POST /api/auth/report  { targetUserId, reason? }
 router.post("/report", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { targetUserId, reason } = req.body as {
+    const { targetUserId, reason, category } = req.body as {
       targetUserId?: string;
       reason?: string;
+      category?: string;
     };
     if (!targetUserId) {
       res.status(400).json({ error: "targetUserId is required" });
+      return;
+    }
+    if (targetUserId === req.user!.id) {
+      res.status(400).json({ error: "You cannot report yourself" });
+      return;
+    }
+    if (!reason?.trim()) {
+      res.status(400).json({ error: "A report reason is required" });
+      return;
+    }
+    const categories = ["harassment", "hate", "sexual", "spam", "safety", "other"];
+    if (!category || !categories.includes(category)) {
+      res.status(400).json({ error: "A valid report category is required" });
       return;
     }
     await db.insert(userReports).values({
       id: crypto.randomUUID(),
       reporterId: req.user!.id,
       reportedId: targetUserId,
-      reason: reason ?? null,
+      category,
+      reason: reason.trim().slice(0, 1000),
     });
     res.json({ success: true });
   } catch {

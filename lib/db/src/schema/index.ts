@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   id: text("id").primaryKey(),
   firstName: text("first_name").notNull(),
   email: text("email").notNull().unique(),
+  firebaseUid: text("firebase_uid").unique(),
   universityEmail: text("university_email"),
   universityId: text("university_id"),
   university: text("university"),
@@ -29,6 +30,12 @@ export const users = pgTable("users", {
   course: text("course"),
   isProfileComplete: boolean("is_profile_complete").default(false).notNull(),
   isPremium: boolean("is_premium").default(false).notNull(),
+  moderationStatus: text("moderation_status").default("active").notNull(),
+  moderationReason: text("moderation_reason"),
+  moderatedAt: timestamp("moderated_at"),
+  moderatedBy: text("moderated_by"),
+  communityGuidelinesVersion: text("community_guidelines_version"),
+  communityGuidelinesAcceptedAt: timestamp("community_guidelines_accepted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -39,6 +46,14 @@ export const authTokens = pgTable("auth_tokens", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastUsedAt: timestamp("last_used_at").defaultNow().notNull(),
+});
+
+export const adminSessions = pgTable("admin_sessions", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull(),
   token: text("token").notNull().unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastUsedAt: timestamp("last_used_at").defaultNow().notNull(),
@@ -138,6 +153,11 @@ export const userReports = pgTable("user_reports", {
   reportedId: text("reported_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  reason: text("reason"),
+  category: text("category").default("other").notNull(),
+  reason: text("reason").default("").notNull(),
+  status: text("status").default("pending").notNull(),
+  adminNote: text("admin_note"),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: text("reviewed_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -51,5 +51,38 @@ export async function deleteFirebaseUserData(uid: string) {
 }
 
 export async function deleteFirebaseAuthUser(uid: string) {
-  await getFirebaseAdminAuth().deleteUser(uid);
+  try {
+    await getFirebaseAdminAuth().deleteUser(uid);
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "auth/user-not-found"
+    ) {
+      return;
+    }
+    throw error;
+  }
+}
+
+export async function ensureFirebaseAuthUser(email: string) {
+  const auth = getFirebaseAdminAuth();
+  try {
+    return await auth.getUserByEmail(email);
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "auth/user-not-found"
+    ) {
+      return auth.createUser({
+        email,
+        emailVerified: true,
+        password: `${crypto.randomUUID()}-${crypto.randomUUID()}`,
+      });
+    }
+    throw error;
+  }
 }

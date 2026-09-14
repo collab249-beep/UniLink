@@ -85,8 +85,8 @@ export default function MeetupScreen() {
     router.replace("/(tabs)");
   }
 
-  async function handleReport() {
-    if (firstOther) await reportUser(firstOther.id);
+  async function handleReport(category: string, reason: string) {
+    if (firstOther) await reportUser(firstOther.id, category, reason);
   }
 
   async function handleBlock() {

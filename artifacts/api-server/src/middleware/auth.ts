@@ -31,6 +31,12 @@ export async function requireAuth(
     return;
   }
 
+  if (row.user.moderationStatus !== "active") {
+    await db.delete(authTokens).where(eq(authTokens.userId, row.user.id));
+    res.status(403).json({ error: "This account has been removed by UniLink moderation" });
+    return;
+  }
+
   // Touch lastUsedAt asynchronously — don't block the request
   db.update(authTokens)
     .set({ lastUsedAt: new Date() })

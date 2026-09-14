@@ -1,4 +1,4 @@
-import { Redirect } from "expo-router";
+import { Redirect, type Href } from "expo-router";
 import React from "react";
 import { ActivityIndicator, View } from "react-native";
 
@@ -18,6 +18,9 @@ export default function Index() {
   }
 
   if (!user) return <Redirect href="/(auth)/login" />;
+  if (!user.communityGuidelinesAcceptedAt) {
+    return <Redirect href={"/(auth)/community-guidelines" as Href} />;
+  }
   if (!user.isVerified) return <Redirect href="/(auth)/verify" />;
   return <Redirect href="/(tabs)" />;
 }

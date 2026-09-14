@@ -2,9 +2,10 @@ import { db } from "@workspace/db";
 import {
   meetupSessions,
   sessionParticipants,
+  userBlocks,
   users,
 } from "@workspace/db/schema";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { Router } from "express";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 
@@ -42,6 +43,23 @@ function getLocation(campusId: string, activity: string): string {
   );
 }
 
+async function getBlockedUserIds(userId: string) {
+  const rows = await db
+    .select({
+      blockerId: userBlocks.blockerId,
+      blockedId: userBlocks.blockedId,
+    })
+    .from(userBlocks)
+    .where(
+      or(eq(userBlocks.blockerId, userId), eq(userBlocks.blockedId, userId)),
+    );
+  return new Set(
+    rows.map((row) =>
+      row.blockerId === userId ? row.blockedId : row.blockerId,
+    ),
+  );
+}
+
 async function getActiveSession(userId: string) {
   const now = new Date();
 
@@ -67,7 +85,7 @@ async function getActiveSession(userId: string) {
   const { session } = rows[0];
 
   // Load all participants
-  const participants = await db
+  const participantRows = await db
     .select({
       id: users.id,
       firstName: users.firstName,
@@ -78,6 +96,10 @@ async function getActiveSession(userId: string) {
     .from(sessionParticipants)
     .innerJoin(users, eq(sessionParticipants.userId, users.id))
     .where(eq(sessionParticipants.sessionId, session.id));
+  const blockedUserIds = await getBlockedUserIds(userId);
+  const participants = participantRows.filter(
+    (participant) => !blockedUserIds.has(participant.id),
+  );
 
   return {
     id: session.id,
@@ -219,7 +241,7 @@ router.get("/history", requireAuth, async (req: AuthRequest, res) => {
 
     const history = await Promise.all(
       rows.slice(-50).map(async ({ session, confirmed }: { session: typeof meetupSessions.$inferSelect; confirmed: boolean }) => {
-        const participants = await db
+        const participantRows = await db
           .select({
             id: users.id,
             firstName: users.firstName,
@@ -229,6 +251,10 @@ router.get("/history", requireAuth, async (req: AuthRequest, res) => {
           .from(sessionParticipants)
           .innerJoin(users, eq(sessionParticipants.userId, users.id))
           .where(eq(sessionParticipants.sessionId, session.id));
+        const blockedUserIds = await getBlockedUserIds(req.user!.id);
+        const participants = participantRows.filter(
+          (participant) => !blockedUserIds.has(participant.id),
+        );
 
         return {
           id: session.id,

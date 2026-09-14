@@ -1,6 +1,10 @@
 import { db } from "@workspace/db";
-import { chatMessages, sessionParticipants } from "@workspace/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import {
+  chatMessages,
+  sessionParticipants,
+  userBlocks,
+} from "@workspace/db/schema";
+import { and, asc, eq, or } from "drizzle-orm";
 import { Router } from "express";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 
@@ -20,6 +24,33 @@ async function assertParticipant(sessionId: string, userId: string) {
   return !!row;
 }
 
+async function hasBlockedParticipant(sessionId: string, userId: string) {
+  const participantRows = await db
+    .select({ userId: sessionParticipants.userId })
+    .from(sessionParticipants)
+    .where(eq(sessionParticipants.sessionId, sessionId));
+  const otherUserIds = new Set(
+    participantRows.map((row) => row.userId).filter((id) => id !== userId),
+  );
+  if (otherUserIds.size === 0) return false;
+
+  const blockRows = await db
+    .select({
+      blockerId: userBlocks.blockerId,
+      blockedId: userBlocks.blockedId,
+    })
+    .from(userBlocks)
+    .where(
+      or(eq(userBlocks.blockerId, userId), eq(userBlocks.blockedId, userId)),
+    );
+
+  return blockRows.some((block) => {
+    const counterpart =
+      block.blockerId === userId ? block.blockedId : block.blockerId;
+    return otherUserIds.has(counterpart);
+  });
+}
+
 // GET /api/chat/:sessionId
 router.get("/:sessionId", requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -27,6 +58,10 @@ router.get("/:sessionId", requireAuth, async (req: AuthRequest, res) => {
     const isMember = await assertParticipant(sessionId, req.user!.id);
     if (!isMember) {
       res.status(403).json({ error: "Not a participant of this session" });
+      return;
+    }
+    if (await hasBlockedParticipant(sessionId, req.user!.id)) {
+      res.status(403).json({ error: "Chat is unavailable for blocked users" });
       return;
     }
 
@@ -65,6 +100,10 @@ router.post("/:sessionId", requireAuth, async (req: AuthRequest, res) => {
     const isMember = await assertParticipant(sessionId, req.user!.id);
     if (!isMember) {
       res.status(403).json({ error: "Not a participant of this session" });
+      return;
+    }
+    if (await hasBlockedParticipant(sessionId, req.user!.id)) {
+      res.status(403).json({ error: "Chat is unavailable for blocked users" });
       return;
     }
 

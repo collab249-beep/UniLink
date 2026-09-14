@@ -68,6 +68,7 @@ export interface ApiUser {
   course: string | null;
   isProfileComplete: boolean;
   isPremium: boolean;
+  communityGuidelinesAcceptedAt?: string | null;
   createdAt: string;
 }
 
@@ -139,7 +140,11 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ email }),
       }),
-    signUp: (data: { firstName: string; email: string }) =>
+    signUp: (data: {
+      firstName: string;
+      email: string;
+      acceptedCommunityGuidelines: boolean;
+    }) =>
       request<{ token: string; user: ApiUser }>("/auth/signup", {
         method: "POST",
         body: JSON.stringify(data),
@@ -162,15 +167,20 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ universityEmail }),
       }),
+    acceptCommunityGuidelines: () =>
+      request<{ user: ApiUser }>("/auth/community-guidelines", {
+        method: "POST",
+        body: JSON.stringify({ accepted: true }),
+      }),
     block: (targetUserId: string) =>
       request<{ success: boolean }>("/auth/block", {
         method: "POST",
         body: JSON.stringify({ targetUserId }),
       }),
-    report: (targetUserId: string, reason?: string) =>
+    report: (targetUserId: string, category: string, reason: string) =>
       request<{ success: boolean }>("/auth/report", {
         method: "POST",
-        body: JSON.stringify({ targetUserId, reason }),
+        body: JSON.stringify({ targetUserId, category, reason }),
       }),
   },
 

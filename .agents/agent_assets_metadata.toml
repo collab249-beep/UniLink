@@ -12,6 +12,7 @@ uri = "file://.local/outputs/UniLink.pptx"
 type = "slides"
 title = "UniLink (PPTX)"
 description = "PowerPoint export of the 6-slide UniLink deck."
+logical_id = "e186b0d5-6ca0-43c0-aec8-86fa241f0a9e"
 
 [[outputs]]
 id = "hYB9mZ31VjK89O8osWIe0"
@@ -19,6 +20,7 @@ uri = "file://.local/outputs/UniLink.pdf"
 type = "pdf"
 title = "UniLink (PDF)"
 description = "PDF export of the 6-slide UniLink deck."
+logical_id = "44f3d923-c608-4fa5-9b49-4e774ae8788d"
 
 [[outputs]]
 id = "xnAj9TUyr5_xes11oYX8N"
@@ -26,6 +28,7 @@ uri = "file://screenshots/unilink-01-sign-in.jpg"
 type = "image"
 title = "UniLink — Sign In"
 description = "iPhone-style screenshot of the UniLink sign-in screen."
+logical_id = "0dd33168-2752-495a-b607-7dda22e9e552"
 
 [[outputs]]
 id = "TLbl8joy2dqjXXmMI_nkW"
@@ -33,6 +36,7 @@ uri = "file://screenshots/unilink-02-register.jpg"
 type = "image"
 title = "UniLink — Create Account"
 description = "iPhone-style screenshot of the UniLink registration screen."
+logical_id = "907e60a8-b357-46d7-9fe1-f6f370cefaa5"
 
 [[outputs]]
 id = "2CR2eJP6_ndHLMZu_vy_f"
@@ -40,6 +44,7 @@ uri = "file://screenshots/unilink-03-profile-setup.jpg"
 type = "image"
 title = "UniLink — Profile Setup"
 description = "iPhone-style screenshot of the profile photo setup screen."
+logical_id = "d3ad14a0-bb71-471b-bca0-18866dd0a469"
 
 [[outputs]]
 id = "uIOFa_DrfzF903KxyV0Z_"
@@ -47,6 +52,7 @@ uri = "file://screenshots/unilink-04-university-verify.jpg"
 type = "image"
 title = "UniLink — University Verification"
 description = "iPhone-style screenshot of the university verification screen."
+logical_id = "d9e1d33c-87f2-493f-944c-0683a7ccf681"
 
 [[outputs]]
 id = "noRJnAfPDvWaXCujPSLgD"
@@ -54,6 +60,7 @@ uri = "file://screenshots/unilink-05-events.jpg"
 type = "image"
 title = "UniLink — Campus Events"
 description = "iPhone-style screenshot of the campus events screen."
+logical_id = "af0a17b9-05ed-4ea1-8f27-d5ca9c96dc51"
 
 [[outputs]]
 id = "F2Z8CuaaAtWX4-htVIh3O"
@@ -61,6 +68,7 @@ uri = "file://screenshots/unilink-06-profile.jpg"
 type = "image"
 title = "UniLink — Profile"
 description = "iPhone-style screenshot of the UniLink profile screen."
+logical_id = "c230a309-7879-4cf2-b395-032026f719df"
 
 [[outputs]]
 id = "jle0Hkq_hfy3dhydIEXHJ"
@@ -68,6 +76,7 @@ uri = "file://screenshots/unilink-feature-01-campus-events.jpg"
 type = "image"
 title = "UniLink Feature — Campus Events"
 description = "Browse food fairs, sports, study sessions, and other campus events. Filter by category, see who is going, and tap Attend to join."
+logical_id = "bfd383a1-d11c-4dda-9766-75e6b62a9a5d"
 
 [[outputs]]
 id = "pSVQulfii5gMLF8sCCGDK"
@@ -75,6 +84,7 @@ uri = "file://screenshots/unilink-feature-02-notification-alerts.jpg"
 type = "image"
 title = "UniLink Feature — Notifications"
 description = "Control alerts for new activity groups, campus events, free-status expiry, and nearby students. Recent updates appear in one place."
+logical_id = "ea79b822-489b-48ea-aceb-e3339cf2a36a"
 
 [[outputs]]
 id = "CBv4JJyoss7LOWVN7xx3h"
@@ -82,6 +92,7 @@ uri = "file://screenshots/unilink-feature-03-meetup-history.jpg"
 type = "image"
 title = "UniLink Feature — Meetup History"
 description = "Keep a record of completed meetups. The empty state guides students to find their first group when they have not met anyone yet."
+logical_id = "96796484-135d-4197-924e-233d3cacb66e"
 
 [[outputs]]
 id = "P5ib-bRGWCxgdffBOVbLK"
@@ -89,6 +100,7 @@ uri = "file://screenshots/unilink-feature-04-premium.jpg"
 type = "image"
 title = "UniLink Feature — Premium Plans"
 description = "Compare monthly, term, and annual plans, then unlock benefits such as unlimited matching and profile boosts."
+logical_id = "4fc5485d-fd35-4398-8ee2-b777c761ee7d"
 
 [[outputs]]
 id = "5m19gqvzq2gHXzy3ghcRp"
@@ -96,6 +108,7 @@ uri = "file://screenshots/unilink-feature-05-referrals.jpg"
 type = "image"
 title = "UniLink Feature — Invite Friends"
 description = "Share a referral code with friends, track your referral rank, and unlock rewards as more students join UniLink."
+logical_id = "a18d6cbc-96f5-4a5e-a212-af3ed04b6cec"
 
 [[outputs]]
 id = "DiOD0xHbu0l0LdyL31Sj7"
@@ -103,3 +116,32 @@ uri = "file://screenshots/unilink-feature-06-edit-profile.jpg"
 type = "image"
 title = "UniLink Feature — Edit Profile"
 description = "Add a photo, name, course, bio, and year of study so other students know who they might meet."
+logical_id = "30ed645a-754e-4105-97cf-571ec7748561"
+
+[[outputs]]
+id = "XFfR0XANt-YxsJcEGrceO"
+uri = "file://screenshots/unilink-admin-login-final.jpg"
+type = "image"
+title = "UniLink moderation login"
+description = "Final desktop verification of the Firebase-backed administrator login at /admin/."
+logical_id = "65d13fa4-d041-4458-ab48-7653a176e3df"
+content_hash = "sha256:92e096ace56bac535ef4fe2cf117bfc5fc0ba09d9fd20dcaefd9820125e76893"
+size = 22571
+mtime_ms = 1789362506429
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:69a48d66-d816-4a07-a41c-17bc42d7e6a8/65d13fa4-d041-4458-ab48-7653a176e3df/b13e85f0-ce7b-47f6-8c91-335915b6f0ed"
+storage_version_token = "1789362526126421"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "PCGWOMV941kJNlTuhOWvf"
+uri = "file://screenshots/unilink-register-guidelines.jpg"
+type = "image"
+title = "Community Guidelines signup"
+description = "Final mobile verification of the required Community Guidelines acceptance during registration."
+logical_id = "673b2615-691a-418c-838e-07b8d6ca3a31"
+content_hash = "sha256:488b87510782979629aae9b1cbaceab73aace0fc17af502e4b8d7eaed8d0c85d"
+size = 25576
+mtime_ms = 1789362348827
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:69a48d66-d816-4a07-a41c-17bc42d7e6a8/673b2615-691a-418c-838e-07b8d6ca3a31/89f94f6c-b1bf-4b60-a1d8-c8518610d8fc"
+storage_version_token = "1789362526788122"
+content_type = "image/jpeg"

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authRouter from "./auth.js";
+import adminRouter from "./admin.js";
 import chatRouter from "./chat.js";
 import healthRouter from "./health.js";
 import liveRouter from "./live.js";
@@ -9,6 +10,7 @@ import sessionsRouter from "./sessions.js";
 const router = Router();
 
 router.use("/healthz", healthRouter);
+router.use("/admin", adminRouter);
 router.use("/auth", authRouter);
 router.use("/live", liveRouter);
 router.use("/sessions", sessionsRouter);

@@ -33,6 +33,7 @@ export interface UserProfile {
   course?: string;
   profileComplete?: boolean;
   isPremium?: boolean;
+  communityGuidelinesAcceptedAt?: string;
 }
 
 interface SocialData {
@@ -46,14 +47,15 @@ interface AuthContextType {
   signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (firstName: string, email: string, password: string) => Promise<UserProfile>;
+  signUp: (firstName: string, email: string, password: string, acceptedCommunityGuidelines: boolean) => Promise<UserProfile>;
+  acceptCommunityGuidelines: () => Promise<void>;
   verifyUniversity: (universityEmail: string) => Promise<void>;
   updateProfilePicture: (uri: string) => Promise<void>;
   updateProfile: (fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "course" | "firstName" | "profileComplete" | "isPremium">>) => Promise<void>;
   deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
-  reportUser: (userId: string) => Promise<void>;
+  reportUser: (userId: string, category: string, reason: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -107,6 +109,8 @@ function apiUserToProfile(apiUser: ApiUser, social: SocialData): UserProfile {
     course: apiUser.course ?? undefined,
     profileComplete: apiUser.isProfileComplete,
     isPremium: apiUser.isPremium,
+    communityGuidelinesAcceptedAt:
+      apiUser.communityGuidelinesAcceptedAt ?? undefined,
     blockedUsers: social.blockedUsers,
     reportedUsers: social.reportedUsers,
   };
@@ -166,10 +170,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await handleAuthResponse(token, apiUser);
   }
 
-  async function signUp(firstName: string, email: string, _password: string): Promise<UserProfile> {
-    const { token, user: apiUser } = await api.auth.signUp({ firstName, email });
+  async function signUp(firstName: string, email: string, _password: string, acceptedCommunityGuidelines: boolean): Promise<UserProfile> {
+    const { token, user: apiUser } = await api.auth.signUp({
+      firstName,
+      email,
+      acceptedCommunityGuidelines,
+    });
     const profile = await handleAuthResponse(token, apiUser);
     return profile;
+  }
+
+  async function acceptCommunityGuidelines() {
+    const { user: apiUser } = await api.auth.acceptCommunityGuidelines();
+    const social = await loadSocial();
+    setUser(apiUserToProfile(apiUser, social));
   }
 
   async function verifyUniversity(universityEmail: string) {
@@ -245,10 +259,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     await saveSocial(updated);
     setUser((u) => u ? { ...u, blockedUsers: updated.blockedUsers } : u);
-    api.auth.block(userId).catch(() => {});
+    await api.auth.block(userId);
   }
 
-  async function reportUser(userId: string) {
+  async function reportUser(userId: string, category: string, reason: string) {
+    await api.auth.report(userId, category, reason);
     const social = await loadSocial();
     const updated: SocialData = {
       ...social,
@@ -256,13 +271,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     await saveSocial(updated);
     setUser((u) => u ? { ...u, reportedUsers: updated.reportedUsers } : u);
-    api.auth.report(userId).catch(() => {});
   }
 
   return (
     <AuthContext.Provider value={{
       user, isLoading,
-      signInWithApple, signInWithGoogle, signIn, signUp,
+      signInWithApple, signInWithGoogle, signIn, signUp, acceptCommunityGuidelines,
       verifyUniversity, updateProfilePicture, updateProfile,
       deleteAccount, signOut, blockUser, reportUser,
     }}>

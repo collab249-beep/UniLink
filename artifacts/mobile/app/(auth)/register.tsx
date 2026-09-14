@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { router, type Href } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -26,6 +27,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [acceptedGuidelines, setAcceptedGuidelines] = useState(false);
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
@@ -38,9 +40,16 @@ export default function RegisterScreen() {
       Alert.alert("Weak password", "Password must be at least 6 characters.");
       return;
     }
+    if (!acceptedGuidelines) {
+      Alert.alert(
+        "Community Guidelines required",
+        "Please read and accept the Community Guidelines to create an account.",
+      );
+      return;
+    }
     setLoading(true);
     try {
-      await signUp(firstName.trim(), email.trim(), password);
+      await signUp(firstName.trim(), email.trim(), password, acceptedGuidelines);
       router.replace("/(auth)/verify");
     } catch {
       Alert.alert("Error", "Registration failed. Please try again.");
@@ -106,6 +115,37 @@ export default function RegisterScreen() {
           </View>
         </View>
 
+        <View style={[styles.guidelinesCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: acceptedGuidelines }}
+            onPress={() => setAcceptedGuidelines((value) => !value)}
+            style={[
+              styles.checkbox,
+              {
+                backgroundColor: acceptedGuidelines ? colors.primary : colors.background,
+                borderColor: acceptedGuidelines ? colors.primary : colors.border,
+              },
+            ]}
+          >
+            {acceptedGuidelines && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+          </TouchableOpacity>
+          <Text style={[styles.guidelinesText, { color: colors.mutedForeground }]}>
+            I agree to follow the{" "}
+            <Text
+              style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}
+              onPress={() =>
+                router.push(
+                  "/(auth)/community-guidelines?readOnly=true" as Href,
+                )
+              }
+            >
+              Community Guidelines
+            </Text>
+            .
+          </Text>
+        </View>
+
         <TouchableOpacity
           style={[styles.btn, { backgroundColor: colors.primary }]}
           onPress={handleRegister}
@@ -139,6 +179,28 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24 },
   content: { padding: 24, gap: 20 },
   form: { gap: 16 },
+  guidelinesCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  guidelinesText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+    fontFamily: "Inter_400Regular",
+  },
   label: { fontSize: 13, fontFamily: "Inter_500Medium", marginBottom: 6, letterSpacing: 0.3 },
   input: {
     borderWidth: 1.5,

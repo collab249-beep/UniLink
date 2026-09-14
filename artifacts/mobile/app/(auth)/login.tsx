@@ -34,7 +34,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInWithGoogle();
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch {
       Alert.alert("Error", "Sign in failed. Please try again.");
     } finally {
@@ -46,7 +46,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInWithApple();
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (error) {
       const code =
         typeof error === "object" && error !== null && "code" in error
@@ -70,7 +70,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch {
       Alert.alert("Error", "Sign in failed. Please try again.");
     } finally {

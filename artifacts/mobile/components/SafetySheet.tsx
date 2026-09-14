@@ -1,12 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Modal,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,13 +17,17 @@ import { useColors } from "@/hooks/useColors";
 interface SafetySheetProps {
   visible: boolean;
   onClose: () => void;
-  onReport: () => void;
+  onReport: (category: string, reason: string) => Promise<void>;
   onBlock: () => void;
   onLeave: () => void;
 }
 
 export function SafetySheet({ visible, onClose, onReport, onBlock, onLeave }: SafetySheetProps) {
   const colors = useColors();
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [category, setCategory] = useState("harassment");
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   function handleEmergency() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -33,15 +38,23 @@ export function SafetySheet({ visible, onClose, onReport, onBlock, onLeave }: Sa
     );
   }
 
-  function handleReport() {
-    Alert.alert("Report User", "Are you sure you want to report this user?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Report",
-        style: "destructive",
-        onPress: () => { onReport(); onClose(); },
-      },
-    ]);
+  async function handleReport() {
+    if (!reason.trim()) {
+      Alert.alert("Add details", "Please explain what happened.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onReport(category, reason.trim());
+      setReason("");
+      setShowReportForm(false);
+      onClose();
+      Alert.alert("Report submitted", "UniLink moderation will review your report.");
+    } catch {
+      Alert.alert("Report failed", "Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleBlock() {
@@ -73,9 +86,64 @@ export function SafetySheet({ visible, onClose, onReport, onBlock, onLeave }: Sa
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           <Text style={[styles.title, { color: colors.foreground }]}>Safety</Text>
 
+          {showReportForm ? (
+            <View style={styles.reportForm}>
+              <Text style={[styles.formLabel, { color: colors.foreground }]}>What happened?</Text>
+              <View style={styles.categoryRow}>
+                {[
+                  ["harassment", "Harassment"],
+                  ["hate", "Hate"],
+                  ["sexual", "Sexual"],
+                  ["spam", "Spam"],
+                  ["safety", "Safety"],
+                  ["other", "Other"],
+                ].map(([value, label]) => (
+                  <TouchableOpacity
+                    key={value}
+                    onPress={() => setCategory(value)}
+                    style={[
+                      styles.categoryChip,
+                      {
+                        backgroundColor: category === value ? colors.primary : colors.muted,
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: category === value ? "#FFFFFF" : colors.foreground, fontSize: 12 }}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                value={reason}
+                onChangeText={setReason}
+                multiline
+                maxLength={1000}
+                placeholder="Describe the behaviour and any safety concerns"
+                placeholderTextColor={colors.mutedForeground}
+                style={[
+                  styles.reportInput,
+                  { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card },
+                ]}
+              />
+              <TouchableOpacity
+                disabled={submitting}
+                onPress={handleReport}
+                style={[styles.submitReport, { backgroundColor: colors.destructive }]}
+              >
+                <Text style={styles.submitReportText}>
+                  {submitting ? "Submitting…" : "Submit Report"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowReportForm(false)} style={styles.formCancel}>
+                <Text style={{ color: colors.mutedForeground }}>Back</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
           <TouchableOpacity
             style={[styles.row, { borderBottomColor: colors.border }]}
-            onPress={handleReport}
+            onPress={() => setShowReportForm(true)}
           >
             <View style={[styles.iconWrap, { backgroundColor: "#FF9F0A18" }]}>
               <Ionicons name="flag" size={22} color="#FF9F0A" />
@@ -117,6 +185,8 @@ export function SafetySheet({ visible, onClose, onReport, onBlock, onLeave }: Sa
           <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: colors.muted }]} onPress={onClose}>
             <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>
           </TouchableOpacity>
+            </>
+          )}
         </Pressable>
       </Pressable>
     </Modal>
@@ -149,6 +219,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 4,
   },
+  reportForm: { gap: 12 },
+  formLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  categoryChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  reportInput: {
+    minHeight: 110,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    fontSize: 14,
+    textAlignVertical: "top",
+  },
+  submitReport: { minHeight: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  submitReportText: { color: "#FFFFFF", fontFamily: "Inter_700Bold", fontSize: 14 },
+  formCancel: { alignItems: "center", paddingVertical: 10 },
   row: {
     flexDirection: "row",
     alignItems: "center",
