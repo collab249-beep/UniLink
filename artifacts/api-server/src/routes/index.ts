@@ -9,6 +9,9 @@ import sessionsRouter from "./sessions.js";
 
 const router = Router();
 
+router.get("/", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 router.use("/healthz", healthRouter);
 router.use("/admin", adminRouter);
 router.use("/auth", authRouter);
