@@ -258,27 +258,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {!user?.isPremium && (
-          <TouchableOpacity
-            style={[styles.premiumCard, { borderColor: "#7B2FFF30" }]}
-            onPress={() => router.push("/(tabs)/premium")}
-          >
-            <LinearGradient
-              colors={["#1A6BFF", "#7B2FFF"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.premiumGradient}
-            >
-              <Text style={styles.premiumEmoji}>👑</Text>
-              <View style={styles.premiumText}>
-                <Text style={styles.premiumTitle}>Upgrade to Premium</Text>
-                <Text style={styles.premiumSub}>Unlimited matches · Profile boost · Exclusive events</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
         {user?.isPremium && (
           <View style={[styles.premiumCard, { borderColor: "#FFD70040" }]}>
             <LinearGradient
