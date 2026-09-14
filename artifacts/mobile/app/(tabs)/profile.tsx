@@ -300,6 +300,14 @@ export default function ProfileScreen() {
         <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity
             style={[styles.infoRow, { borderBottomColor: colors.border }]}
+            onPress={() => router.push("/(tabs)/settings")}
+          >
+            <Ionicons name="settings-outline" size={20} color={colors.mutedForeground} />
+            <Text style={[styles.menuLabel, { color: colors.foreground }]}>Settings</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.infoRow, { borderBottomColor: colors.border }]}
             onPress={() => router.push("/(tabs)/history")}
           >
             <Ionicons name="time-outline" size={20} color={colors.mutedForeground} />

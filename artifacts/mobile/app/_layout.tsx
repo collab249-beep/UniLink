@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { LiveActivityProvider } from "@/contexts/LiveActivityContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
@@ -32,6 +33,27 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
     </Stack>
+  );
+}
+
+function UserScopedProviders() {
+  const { user } = useAuth();
+  const scopeKey = user?.id ?? "signed-out";
+
+  return (
+    <NotificationProvider key={scopeKey}>
+      <LiveActivityProvider>
+        <SessionProvider>
+          <ChatProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <KeyboardProvider>
+                <RootLayoutNav />
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </ChatProvider>
+        </SessionProvider>
+      </LiveActivityProvider>
+    </NotificationProvider>
   );
 }
 
@@ -54,19 +76,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <NotificationProvider>
-              <LiveActivityProvider>
-                <SessionProvider>
-                  <ChatProvider>
-                    <GestureHandlerRootView style={{ flex: 1 }}>
-                      <KeyboardProvider>
-                        <RootLayoutNav />
-                      </KeyboardProvider>
-                    </GestureHandlerRootView>
-                  </ChatProvider>
-                </SessionProvider>
-              </LiveActivityProvider>
-            </NotificationProvider>
+            <UserScopedProviders />
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>

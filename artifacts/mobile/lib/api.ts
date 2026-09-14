@@ -146,6 +146,11 @@ export const api = {
       }),
     signOut: () =>
       request<{ success: boolean }>("/auth/signout", { method: "POST" }),
+    deleteAccount: (idToken: string) =>
+      request<{ success: boolean }>("/auth/account", {
+        method: "DELETE",
+        body: JSON.stringify({ idToken }),
+      }),
     me: () => request<{ user: ApiUser }>("/auth/me"),
     updateProfile: (data: Partial<ApiUser>) =>
       request<{ user: ApiUser }>("/auth/profile", {

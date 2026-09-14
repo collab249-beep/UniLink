@@ -1,6 +1,10 @@
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
-import { OAuthProvider, signInWithCredential } from "firebase/auth";
+import {
+  OAuthProvider,
+  signInWithCredential,
+  signOut as firebaseSignOut,
+} from "firebase/auth";
 import { Platform } from "react-native";
 
 import { getFirebaseAuth } from "@/lib/firebase";
@@ -59,4 +63,8 @@ export async function signInToFirebaseWithApple(): Promise<{
     idToken: await result.user.getIdToken(),
     firstName,
   };
+}
+
+export async function signOutFromFirebase(): Promise<void> {
+  await firebaseSignOut(getFirebaseAuth());
 }

@@ -3,7 +3,11 @@ import { authTokens, userBlocks, userReports, users } from "@workspace/db/schema
 import { and, eq } from "drizzle-orm";
 import { Router } from "express";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
-import { verifyFirebaseIdToken } from "../lib/firebaseAdmin.js";
+import {
+  deleteFirebaseAuthUser,
+  deleteFirebaseUserData,
+  verifyFirebaseIdToken,
+} from "../lib/firebaseAdmin.js";
 
 const router = Router();
 
@@ -104,7 +108,13 @@ router.post("/firebase", async (req, res) => {
       return;
     }
 
-    const decoded = await verifyFirebaseIdToken(idToken);
+    let decoded: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
+    try {
+      decoded = await verifyFirebaseIdToken(idToken, true);
+    } catch {
+      res.status(401).json({ error: "Please sign in with Apple again" });
+      return;
+    }
     if (!decoded.email || decoded.email_verified !== true) {
       res.status(401).json({ error: "Firebase account email is not verified" });
       return;
@@ -176,6 +186,66 @@ router.post("/signout", requireAuth, async (req: AuthRequest, res) => {
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: "Sign-out failed" });
+  }
+});
+
+// DELETE /api/auth/account  { idToken }
+router.delete("/account", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { idToken } = req.body as { idToken?: string };
+    if (!idToken) {
+      res.status(400).json({ error: "A fresh Firebase ID token is required" });
+      return;
+    }
+
+    let decoded: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
+    try {
+      decoded = await verifyFirebaseIdToken(idToken, true);
+    } catch {
+      res.status(401).json({ error: "Please sign in with Apple again" });
+      return;
+    }
+    const firebaseEmail = decoded.email?.trim().toLowerCase();
+    const currentEmail = req.user!.email.trim().toLowerCase();
+    const authAgeSeconds = Math.floor(Date.now() / 1000) - decoded.auth_time;
+    const provider = decoded.firebase?.sign_in_provider;
+
+    if (
+      provider !== "apple.com" ||
+      authAgeSeconds < 0 ||
+      authAgeSeconds > 5 * 60
+    ) {
+      res.status(401).json({ error: "A recent Apple sign-in is required" });
+      return;
+    }
+
+    if (!firebaseEmail || decoded.email_verified !== true) {
+      res.status(401).json({ error: "Firebase account email is not verified" });
+      return;
+    }
+
+    if (firebaseEmail !== currentEmail) {
+      res.status(403).json({ error: "Firebase account does not match the current UniLink account" });
+      return;
+    }
+
+    // Firestore user data is scoped beneath users/{firebaseUid}.
+    await deleteFirebaseUserData(decoded.uid);
+
+    // Existing foreign keys cascade through tokens, sessions, chat, preferences,
+    // blocks, reports, and other UniLink records tied to this user.
+    await db.delete(users).where(eq(users.id, req.user!.id));
+
+    // Delete Firebase Auth last so a partial failure remains recoverable by
+    // signing in again and retrying the deletion.
+    await deleteFirebaseAuthUser(decoded.uid);
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({
+      error:
+        "Account deletion could not be completed. Please sign in again and retry.",
+    });
   }
 });
 

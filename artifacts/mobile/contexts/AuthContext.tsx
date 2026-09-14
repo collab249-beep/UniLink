@@ -1,9 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
 
 import { UniversityId } from "@/constants/universities";
 import { api, clearToken, getToken, setToken, type ApiUser } from "@/lib/api";
-import { signInToFirebaseWithApple } from "@/lib/appleAuth";
+import {
+  signInToFirebaseWithApple,
+  signOutFromFirebase,
+} from "@/lib/appleAuth";
 
 const SOCIAL_KEY = "unilink:social"; // local-only: blocked/reported user IDs
 
@@ -45,6 +50,7 @@ interface AuthContextType {
   verifyUniversity: (universityEmail: string) => Promise<void>;
   updateProfilePicture: (uri: string) => Promise<void>;
   updateProfile: (fields: Partial<Pick<UserProfile, "bio" | "interests" | "year" | "course" | "firstName" | "profileComplete" | "isPremium">>) => Promise<void>;
+  deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
   reportUser: (userId: string) => Promise<void>;
@@ -63,6 +69,22 @@ async function loadSocial(): Promise<SocialData> {
 
 async function saveSocial(data: SocialData) {
   await AsyncStorage.setItem(SOCIAL_KEY, JSON.stringify(data));
+}
+
+async function clearLocalUserData() {
+  await AsyncStorage.multiRemove([
+    SOCIAL_KEY,
+    "unilink:session",
+    "unilink:free",
+    "notification_prefs",
+  ]);
+
+  if (Platform.OS !== "web") {
+    await Promise.allSettled([
+      Notifications.cancelAllScheduledNotificationsAsync(),
+      Notifications.dismissAllNotificationsAsync(),
+    ]);
+  }
 }
 
 function apiUserToProfile(apiUser: ApiUser, social: SocialData): UserProfile {
@@ -183,8 +205,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.auth.signOut();
     } catch {}
+    try {
+      await signOutFromFirebase();
+    } catch {}
     await clearToken();
-    await AsyncStorage.multiRemove([SOCIAL_KEY, "unilink:session", "unilink:free"]);
+    await clearLocalUserData();
+    setUser(null);
+  }
+
+  async function deleteAccount() {
+    const { idToken } = await signInToFirebaseWithApple();
+    try {
+      await api.auth.deleteAccount(idToken);
+    } catch (error) {
+      // A distributed deletion may have completed only some systems. Clear the
+      // local session so the next attempt always starts from a clean sign-in.
+      try {
+        await signOutFromFirebase();
+      } catch {}
+      await clearToken();
+      await clearLocalUserData();
+      setUser(null);
+      throw error;
+    }
+
+    try {
+      await signOutFromFirebase();
+    } catch {}
+    await clearToken();
+    await clearLocalUserData();
     setUser(null);
   }
 
@@ -215,7 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, isLoading,
       signInWithApple, signInWithGoogle, signIn, signUp,
       verifyUniversity, updateProfilePicture, updateProfile,
-      signOut, blockUser, reportUser,
+      deleteAccount, signOut, blockUser, reportUser,
     }}>
       {children}
     </AuthContext.Provider>
