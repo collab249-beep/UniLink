@@ -33,3 +33,11 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_FIREBASE_API_KEY = "AIzaSyAqIWax2srvd4HeLyoV3nm4jlGd60YrYmc"
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN = "unilink-c641a.firebaseapp.com"
+EXPO_PUBLIC_FIREBASE_PROJECT_ID = "unilink-c641a"
+EXPO_PUBLIC_FIREBASE_APP_ID = "1:28901165307:web:d17b3018bd2e303ed4485e"
